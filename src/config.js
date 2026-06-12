@@ -11,22 +11,21 @@ export const COLORS = [
   { id: 'olive', label: 'Olive', swatch: '#8a8b5c' },
 ]
 
-// The flock. PLACEHOLDER names — replace with the real hens. Each chicken's
-// egg color drives the smart picker: choosing a color in the form surfaces
-// the hens that lay it.
+// The flock. Each chicken's egg color drives the smart picker: choosing a
+// color in the form surfaces the hens that lay it.
 export const CHICKENS = [
-  { name: 'Henrietta', color: 'brown' },
-  { name: 'Butterscotch', color: 'brown' },
-  { name: 'Nugget', color: 'brown' },
-  { name: 'Pepper', color: 'brown' },
-  { name: 'Marigold', color: 'brown' },
-  { name: 'Clementine', color: 'brown' },
-  { name: 'Sky', color: 'blue' },
-  { name: 'Periwinkle', color: 'blue' },
-  { name: 'Robin', color: 'blue' },
-  { name: 'Sage', color: 'olive' },
-  { name: 'Pickles', color: 'olive' },
-  { name: 'Fern', color: 'olive' },
+  { name: 'Goldilocks', color: 'brown' },
+  { name: 'Reba', color: 'brown' },
+  { name: 'Mabel', color: 'brown' },
+  { name: 'Clive', color: 'brown' },
+  { name: 'Gimpy', color: 'blue' },
+  { name: 'Mr Penguin', color: 'blue' },
+  { name: 'Athena', color: 'blue' },
+  { name: 'Tootsie', color: 'blue' },
+  { name: 'Toni', color: 'olive' },
+  { name: 'Randy Roo', color: 'olive' },
+  { name: 'Thing #1', color: 'olive' },
+  { name: 'Thing #2', color: 'olive' },
 ]
 
 // Weight picker range (grams): drives the tens-row buttons (20s..70s).
