@@ -29,6 +29,6 @@ export const CHICKENS = [
   { name: 'Fern', color: 'olive' },
 ]
 
-// Sanity bounds for weight entry (grams).
+// Weight picker range (grams): drives the tens-row buttons (20s..70s).
 export const WEIGHT_MIN = 20
-export const WEIGHT_MAX = 100
+export const WEIGHT_MAX = 79

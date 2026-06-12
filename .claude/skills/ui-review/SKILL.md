@@ -30,7 +30,7 @@ Wipe localStorage first so runs are deterministic. Capture at **390×844**
 1. Log view, empty (no data)
 2. Debug tab after seeding (`#d-seed` button)
 3. Log view with history + a just-saved entry (status/undo pill visible)
-4. Log view with an armed delete ("Sure?" state) and a typed weight
+4. Log view with an armed delete ("Sure?" state) and a selected weight
 5. Stats view, `fullPage: true`
 6. Log view at **320×640** (small phone)
 7. Log view at **1280×800** (desktop)

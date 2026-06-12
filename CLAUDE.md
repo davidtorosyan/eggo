@@ -7,8 +7,9 @@ out → logged in seconds.
 ## Core flow (mobile-first)
 
 1. Open the site on a phone
-2. Enter the egg's **weight** — as frictionless as possible (numeric-keypad-friendly
-   input; typical egg range is ~40–70g)
+2. Enter the egg's **weight** — keyboard-free two-tap picker: a tens button
+   (20s..70s) plus an optional ones digit (50s + 2 = 52g). Never open the
+   on-screen keyboard; typical egg range is ~40–70g
 3. Pick a **color**: brown, blue, or olive
 4. *(Optional, nice-to-have)* pick which **chicken** laid it
 5. Hit enter/save → record is stored

@@ -7,18 +7,31 @@ import {
 } from './config.js'
 import { saveEgg, deleteEgg, getEntries } from './storage.js'
 
-const LAST_WEIGHT_KEY = 'eggo-last-weight'
+const TENS = []
+for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
+  TENS.push(t)
+}
+const ONES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 export function renderLog(view) {
+  // Two-tap keyboard-free weight entry: a tens button (20s..70s) plus an
+  // optional ones digit. Tens-only saves as a round weight (50s -> 50g).
+  let tens = null
+  let ones = null
+
   view.innerHTML = `
     <form id="egg-form" autocomplete="off">
-      <label class="field-label" for="weight">Weight</label>
-      <div class="weight-row">
-        <button type="button" class="nudge" data-nudge="-1" aria-label="One gram less">−</button>
-        <input id="weight" type="number" inputmode="decimal" step="0.1"
-               min="${WEIGHT_MIN}" max="${WEIGHT_MAX}" placeholder="0" required />
-        <span class="unit">g</span>
-        <button type="button" class="nudge" data-nudge="1" aria-label="One gram more">+</button>
+      <label class="field-label">Weight</label>
+      <div class="weight-display"><span id="w-value">—</span><span class="unit">g</span></div>
+      <div class="tens-row">
+        ${TENS.map(
+          (t) => `<button type="button" class="key" data-tens="${t}">${t}0s</button>`,
+        ).join('')}
+      </div>
+      <div class="ones-row">
+        ${ONES.map(
+          (o) => `<button type="button" class="key" data-ones="${o}">${o}</button>`,
+        ).join('')}
       </div>
 
       <label class="field-label">Color</label>
@@ -49,12 +62,39 @@ export function renderLog(view) {
   `
 
   const form = view.querySelector('#egg-form')
-  const weightInput = view.querySelector('#weight')
+  const weightValue = view.querySelector('#w-value')
   const chickenSelect = view.querySelector('#chicken')
   const saveButton = view.querySelector('#save')
   const statusEl = view.querySelector('#status')
   const todayLine = view.querySelector('#today-line')
   const historyEl = view.querySelector('#history')
+
+  // --- Weight picker ---
+  function updateWeight() {
+    weightValue.textContent = tens === null ? '—' : String(tens * 10 + (ones ?? 0))
+    weightValue.classList.toggle('placeholder', tens === null)
+    view
+      .querySelectorAll('[data-tens]')
+      .forEach((b) => b.classList.toggle('active', Number(b.dataset.tens) === tens))
+    view
+      .querySelectorAll('[data-ones]')
+      .forEach((b) =>
+        b.classList.toggle('active', ones !== null && Number(b.dataset.ones) === ones),
+      )
+  }
+  view.querySelectorAll('[data-tens]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      tens = Number(btn.dataset.tens)
+      updateWeight()
+    }),
+  )
+  view.querySelectorAll('[data-ones]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      ones = Number(btn.dataset.ones)
+      updateWeight()
+    }),
+  )
+  updateWeight()
 
   // --- Smart chicken picker: hens that lay the selected color come first ---
   function fillChickenOptions() {
@@ -74,22 +114,14 @@ export function renderLog(view) {
   )
   fillChickenOptions()
 
-  // --- Weight nudges: ±1g; from empty, start at the last saved weight ---
-  view.querySelectorAll('.nudge').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      const current = parseFloat(weightInput.value)
-      const base = Number.isFinite(current)
-        ? current
-        : Number(localStorage.getItem(LAST_WEIGHT_KEY)) || 50
-      const next = base + Number(btn.dataset.nudge)
-      weightInput.value = Math.min(WEIGHT_MAX, Math.max(WEIGHT_MIN, Math.round(next * 10) / 10))
-    }),
-  )
-
   // --- Save + undo ---
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
-    const weight = Number(weightInput.value)
+    if (tens === null) {
+      showStatus('Tap a weight first')
+      return
+    }
+    const weight = tens * 10 + (ones ?? 0)
 
     saveButton.disabled = true
     let entry, queued
@@ -107,14 +139,14 @@ export function renderLog(view) {
       saveButton.disabled = false
     }
 
-    localStorage.setItem(LAST_WEIGHT_KEY, weight)
     const offlineNote = APPS_SCRIPT_URL && queued ? ' (offline — will sync later)' : ''
     showStatus(`Saved ${weight}g${offlineNote}`, entry.id)
 
     // Reset for the next egg: keep color (clutches often match), clear weight.
-    weightInput.value = ''
+    tens = null
+    ones = null
+    updateWeight()
     fillChickenOptions()
-    weightInput.focus()
     refreshHistory()
   })
 
@@ -178,7 +210,6 @@ export function renderLog(view) {
   })
 
   refreshHistory()
-  weightInput.focus()
 }
 
 function isToday(entry) {
