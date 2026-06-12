@@ -52,6 +52,10 @@ Read every screenshot with the Read tool and check:
 - **No layout shift from state changes** — armed delete, status pill
   appearing, tab switches.
 - **Touch targets ≥ ~44px** for destructive or frequent controls.
+- **No silent text truncation**: anything styled with text-overflow:
+  ellipsis (e.g. the hen buttons) must be measured, not eyeballed —
+  compare scrollWidth vs clientWidth per element, across ALL data
+  variants (every color's hens), at 393px and 320px.
 - **Charts**: time ranges labeled (· last 14 days / · all time), axes
   readable, nothing clipped at phone width.
 - **Contrast**: soft-ink text on cream still legible in screenshots.

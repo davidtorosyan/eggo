@@ -490,7 +490,8 @@ h1 {
     font-size: 0.9rem;
   }
 
-  .key.hen {
-    font-size: 0.72rem;
+  /* 2x2 grid: four-across truncates the longer names (e.g. Mr Penguin) */
+  .chicken-row {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
