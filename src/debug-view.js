@@ -61,7 +61,7 @@ export function renderDebug(view) {
         a.timestamp.localeCompare(b.timestamp),
       ),
     )
-    rerender(`Imported ${entries.length} eggs.`)
+    rerender(`Imported ${entries.length} egg${entries.length === 1 ? '' : 's'}.`)
   })
 
   // Two-tap wipe, same pattern as history delete.

@@ -1,12 +1,15 @@
 // Parser for the Debug tab's bulk-import textarea. Format:
 //
-//   June 12
+//   June 12          (also "Jun 3", "June 1, 2026")
 //   Egg (brown) - 46g - Goldilocks
 //   Egg (olive) - 30g
 //   Egg(blue) - 30g
 //
 // Date lines start a day; egg lines below it belong to that day. Weight and
-// chicken are optional. All-or-nothing: any error and nothing is imported.
+// chicken are optional. Tolerated variants: "Egg 3 (brown)" (numbered),
+// "Egg: 42g - clive" (no color — inferred from the hen's roster color),
+// "-36g" (missing space), "????" as the hen (unknown → blank), any letter
+// case. All-or-nothing: any error and nothing is imported.
 import { COLORS, CHICKENS } from './config.js'
 import { uid } from './storage.js'
 
@@ -16,7 +19,9 @@ const MONTHS = [
 ]
 
 const DATE_RE = /^([a-z]+)\.?\s+(\d{1,2})(?:,?\s*(\d{4}))?$/i
-const EGG_RE = /^egg\s*\(\s*([a-z]+)\s*\)\s*(?:-\s*(\d+(?:\.\d+)?)\s*g?)?\s*(?:-\s*(.+))?$/i
+// egg [number] [(color)] [:] [- weight g] [- chicken]
+const EGG_RE =
+  /^egg(?:\s*\d+)?\s*(?:\(\s*([a-z]+)\s*\))?\s*:?\s*(?:-?\s*(\d+(?:\.\d+)?)\s*g?\b)?\s*(?:-\s*(.+))?$/i
 
 // Returns { entries, errors }. Entries are ready for the store: unsynced,
 // timestamped at noon plus a minute per egg to preserve listed order.
@@ -58,12 +63,14 @@ export function parseImport(text) {
       errors.push(`Line ${lineNo}: egg listed before any date line`)
       return
     }
-    const color = eggMatch[1].toLowerCase()
-    if (!COLORS.some((c) => c.id === color)) {
+    let color = eggMatch[1]?.toLowerCase() ?? null
+    if (color && !COLORS.some((c) => c.id === color)) {
       errors.push(`Line ${lineNo}: unknown color "${eggMatch[1]}"`)
       return
     }
     let chicken = eggMatch[3]?.trim() || null
+    // "????", "?" etc. mean the hen is unknown — same as leaving it blank
+    if (chicken && /^\?+$/.test(chicken)) chicken = null
     if (chicken) {
       const known = CHICKENS.find((c) => c.name.toLowerCase() === chicken.toLowerCase())
       if (!known) {
@@ -71,6 +78,12 @@ export function parseImport(text) {
         return
       }
       chicken = known.name
+      // No color in the line ("Egg: 42g - clive") → the hen tells us
+      if (!color) color = known.color
+    }
+    if (!color) {
+      errors.push(`Line ${lineNo}: no color, and no chicken to infer it from`)
+      return
     }
     const ts = new Date(day)
     ts.setMinutes(ts.getMinutes() + seq++)
