@@ -14,9 +14,11 @@
   box-sizing: border-box;
 }
 
-html {
-  /* No double-tap zoom on iOS (and no 300ms tap delay) — taps act
-     immediately. Pinch zoom still works. */
+/* No double-tap zoom on iOS (and no 300ms tap delay) — taps act
+   immediately. Pinch zoom still works. Applied to every element, not
+   just html: iOS Safari doesn't reliably honor the ancestor value on
+   interactive elements (buttons, selects). */
+* {
   touch-action: manipulation;
 }
 
