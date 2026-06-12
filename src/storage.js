@@ -18,10 +18,19 @@ export function setEntries(entries) {
   localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries))
 }
 
+// crypto.randomUUID is unavailable in insecure contexts (plain-HTTP LAN
+// testing on a phone), so fall back to a timestamp+random id.
+export function uid() {
+  return (
+    crypto.randomUUID?.() ??
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+  )
+}
+
 // Returns { entry, queued } — queued means the entry is saved locally but not
 // yet in the Sheet (endpoint unconfigured, or offline in the coop).
 export async function saveEgg(data) {
-  const entry = { id: crypto.randomUUID(), synced: false, ...data }
+  const entry = { id: uid(), synced: false, ...data }
   setEntries([...getEntries(), entry])
   const allSynced = await trySync()
   return { entry, queued: !allSynced }

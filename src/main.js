@@ -2,8 +2,6 @@ import './style.css'
 import { renderLog } from './log-view.js'
 import { renderStats } from './stats-view.js'
 
-if (import.meta.env.DEV) import('./seed.js')
-
 const app = document.querySelector('#app')
 
 app.innerHTML = `
@@ -20,15 +18,35 @@ app.innerHTML = `
 `
 
 const view = document.querySelector('#view')
-const tabs = [...document.querySelectorAll('.tab')]
+const nav = document.querySelector('.tabs')
 const views = { log: renderLog, stats: renderStats }
 
 function show(name) {
   if (!views[name]) name = 'log'
-  tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name))
+  document
+    .querySelectorAll('.tab')
+    .forEach((t) => t.classList.toggle('active', t.dataset.tab === name))
   history.replaceState(null, '', name === 'log' ? '#' : `#${name}`)
   views[name](view)
 }
 
-tabs.forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)))
+nav.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab')
+  if (tab) show(tab.dataset.tab)
+})
+
 show(location.hash.replace('#', '') || 'log')
+
+// Debug tab — dev builds only; the whole chunk is dropped from prod.
+if (import.meta.env.DEV) {
+  import('./debug-view.js').then(({ renderDebug }) => {
+    views.debug = renderDebug
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'tab'
+    btn.dataset.tab = 'debug'
+    btn.textContent = 'Debug'
+    nav.append(btn)
+    if (location.hash === '#debug') show('debug')
+  })
+}

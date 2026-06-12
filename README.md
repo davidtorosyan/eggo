@@ -25,9 +25,9 @@ npm run build  # production build to dist/
 4. Put that URL in `src/config.js` (`APPS_SCRIPT_URL`)
 5. Fill in your chickens' names and egg colors in `src/config.js` (`CHICKENS`)
 
-During development, console helpers are available on `window.eggo`
-(`seed`, `clearSeed`, `clearAll`, `list`) for generating and managing
-fake local data.
+During development (`npm run dev`), a **Debug** tab appears in the app for
+seeding fake data and wiping local entries — usable from a phone, no console
+needed. It is excluded from production builds.
 
 Pushing to `main` deploys to GitHub Pages via the workflow in
 `.github/workflows/deploy.yml` (set Pages source to "GitHub Actions" in repo

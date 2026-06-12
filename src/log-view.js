@@ -92,13 +92,20 @@ export function renderLog(view) {
     const weight = Number(weightInput.value)
 
     saveButton.disabled = true
-    const { entry, queued } = await saveEgg({
-      timestamp: new Date().toISOString(),
-      weight,
-      color: form.elements.color.value,
-      chicken: chickenSelect.value || null,
-    })
-    saveButton.disabled = false
+    let entry, queued
+    try {
+      ;({ entry, queued } = await saveEgg({
+        timestamp: new Date().toISOString(),
+        weight,
+        color: form.elements.color.value,
+        chicken: chickenSelect.value || null,
+      }))
+    } catch (err) {
+      showStatus(`Couldn't save: ${err.message}`)
+      return
+    } finally {
+      saveButton.disabled = false
+    }
 
     localStorage.setItem(LAST_WEIGHT_KEY, weight)
     const offlineNote = APPS_SCRIPT_URL && queued ? ' (offline — will sync later)' : ''

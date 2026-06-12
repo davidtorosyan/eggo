@@ -1,13 +1,10 @@
-// Dev-only console tools (loaded only in `npm run dev`, never in the build).
-// Usage from the browser console:
-//   eggo.seed(21)    — add ~3 weeks of fake eggs (marks them seeded+synced)
-//   eggo.clearSeed() — remove only seeded entries
-//   eggo.clearAll()  — wipe ALL local entries
-//   eggo.list()      — console.table of everything
+// Fake-data generators for the dev-only Debug tab. Never loaded in prod
+// builds (only imported from debug-view.js behind import.meta.env.DEV).
 import { CHICKENS } from './config.js'
-import { getEntries, setEntries } from './storage.js'
+import { getEntries, setEntries, uid } from './storage.js'
 
-function seed(days = 21) {
+// Adds ~`days` days of fake eggs; returns how many were created.
+export function seed(days = 21) {
   const fresh = []
   const now = new Date()
   for (let d = days; d >= 1; d--) {
@@ -21,7 +18,7 @@ function seed(days = 21) {
       date.setHours(randInt(7, 14), randInt(0, 59), randInt(0, 59), 0)
       const weight = clamp(44 + ramp * 10 + gauss() * 4, 35, 70)
       fresh.push({
-        id: crypto.randomUUID(),
+        id: uid(),
         timestamp: date.toISOString(),
         weight: Math.round(weight * 10) / 10,
         color: chicken.color,
@@ -31,26 +28,23 @@ function seed(days = 21) {
       })
     }
   }
-  const all = [...getEntries(), ...fresh].sort((a, b) =>
-    a.timestamp.localeCompare(b.timestamp),
+  setEntries(
+    [...getEntries(), ...fresh].sort((a, b) =>
+      a.timestamp.localeCompare(b.timestamp),
+    ),
   )
-  setEntries(all)
-  console.info(`[eggo] seeded ${fresh.length} eggs over ${days} days — reload or switch tabs to see them`)
+  return fresh.length
 }
 
-function clearSeed() {
+// Removes only seeded entries; returns how many real entries remain.
+export function clearSeed() {
   const kept = getEntries().filter((e) => !e.seeded)
   setEntries(kept)
-  console.info(`[eggo] seeded entries removed, ${kept.length} real entries kept`)
+  return kept.length
 }
 
-function clearAll() {
+export function clearAll() {
   setEntries([])
-  console.info('[eggo] all local entries wiped')
-}
-
-function list() {
-  console.table(getEntries())
 }
 
 function randInt(min, max) {
@@ -65,6 +59,3 @@ function gauss() {
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v))
 }
-
-window.eggo = { seed, clearSeed, clearAll, list }
-console.info('[eggo] dev tools ready: eggo.seed(days), eggo.clearSeed(), eggo.clearAll(), eggo.list()')

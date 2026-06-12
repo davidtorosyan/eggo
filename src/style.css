@@ -377,3 +377,43 @@ h1 {
   text-align: center;
   color: var(--ink-soft);
 }
+
+/* Debug tab */
+.debug-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.debug-btn {
+  padding: 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.debug-btn:active {
+  border-color: var(--accent);
+}
+
+.debug-btn.danger {
+  color: var(--danger);
+}
+
+.debug-btn.danger.arm {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+.debug-note {
+  min-height: 1.3em;
+  margin: 12px 0 0;
+  text-align: center;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
