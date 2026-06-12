@@ -4,8 +4,9 @@ node_modules/
 # Build output
 dist/
 
-# Local machine-specific notes (never commit — see CLAUDE.md)
+# Local machine-specific notes/config (never commit — see CLAUDE.md)
 CLAUDE.local.md
+.claude/settings.local.json
 
 # Local env/config overrides
 .env

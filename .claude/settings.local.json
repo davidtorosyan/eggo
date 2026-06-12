@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^\\(127\\\\.|169\\\\.254\\\\.\\)' } | Select-Object IPAddress, InterfaceAlias | Format-Table -AutoSize)",
-      "PowerShell(npm install chart.js)",
-      "PowerShell(npm run build)"
-    ]
-  }
-}
