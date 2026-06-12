@@ -42,3 +42,18 @@ out → logged in seconds.
   fresh each session instead of recording it — it can change anyway (DHCP).
 - If any machine-specific notes ever do need to persist, put them in
   `CLAUDE.local.md`, which must be gitignored.
+
+## Verifying changes
+
+- After changing user-facing behavior, verify by driving the real app in a
+  headless browser — don't stop at "the build passed."
+- **Test via the LAN IP URL (`http://<detected-ip>:5173`), never localhost.**
+  localhost is a secure context and the LAN IP is not, so localhost masks
+  bugs that only appear on the phone (e.g. `crypto.randomUUID` being
+  undefined silently broke saving). Match the phone's environment: plain
+  HTTP, non-localhost origin, phone-sized viewport.
+- Working recipe: `npm install puppeteer-core` in a temp dir (NOT in this
+  project) and launch system Edge headless
+  (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`); listen
+  for `pageerror`/console errors, exercise the flow end to end, screenshot,
+  and clean up any test entries written to localStorage.
