@@ -11,11 +11,22 @@ export const COLORS = [
   { id: 'olive', label: 'Olive', swatch: '#8a8b5c' },
 ]
 
-// The flock. Fill in real names; order here is display order.
+// The flock. PLACEHOLDER names — replace with the real hens. Each chicken's
+// egg color drives the smart picker: choosing a color in the form surfaces
+// the hens that lay it.
 export const CHICKENS = [
-  'Chicken 1', 'Chicken 2', 'Chicken 3', 'Chicken 4',
-  'Chicken 5', 'Chicken 6', 'Chicken 7', 'Chicken 8',
-  'Chicken 9', 'Chicken 10', 'Chicken 11', 'Chicken 12',
+  { name: 'Henrietta', color: 'brown' },
+  { name: 'Butterscotch', color: 'brown' },
+  { name: 'Nugget', color: 'brown' },
+  { name: 'Pepper', color: 'brown' },
+  { name: 'Marigold', color: 'brown' },
+  { name: 'Clementine', color: 'brown' },
+  { name: 'Sky', color: 'blue' },
+  { name: 'Periwinkle', color: 'blue' },
+  { name: 'Robin', color: 'blue' },
+  { name: 'Sage', color: 'olive' },
+  { name: 'Pickles', color: 'olive' },
+  { name: 'Fern', color: 'olive' },
 ]
 
 // Sanity bounds for weight entry (grams).
