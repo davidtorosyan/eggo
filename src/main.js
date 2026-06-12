@@ -35,7 +35,8 @@ nav.addEventListener('click', (e) => {
   if (tab) show(tab.dataset.tab)
 })
 
-show(location.hash.replace('#', '') || 'log')
+const requested = location.hash.replace('#', '') || 'log'
+show(requested)
 
 // Debug tab — dev builds only; the whole chunk is dropped from prod.
 if (import.meta.env.DEV) {
@@ -47,6 +48,8 @@ if (import.meta.env.DEV) {
     btn.dataset.tab = 'debug'
     btn.textContent = 'Debug'
     nav.append(btn)
-    if (location.hash === '#debug') show('debug')
+    // The initial show() fell back to Log if #debug was requested before
+    // this chunk loaded — honor the original deep link now.
+    if (requested === 'debug') show('debug')
   })
 }

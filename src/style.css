@@ -476,12 +476,31 @@ h1 {
   color: white;
 }
 
+#d-import-text {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  resize: vertical;
+}
+
+#d-import-text:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .debug-note {
   min-height: 1.3em;
   margin: 12px 0 0;
   text-align: center;
   font-weight: 600;
   color: var(--ink-soft);
+  white-space: pre-line; /* multi-line import error lists */
 }
 
 /* Small phones: tighter card and tabs so nothing overflows */
