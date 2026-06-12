@@ -7,7 +7,7 @@ function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   sheet.appendRow([
     entry.timestamp,
-    entry.weight,
+    entry.weight == null ? '' : entry.weight,
     entry.color,
     entry.chicken || '',
   ]);

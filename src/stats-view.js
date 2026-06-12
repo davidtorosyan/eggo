@@ -22,13 +22,16 @@ export function renderStats(view) {
   const total = entries.length
   const weekAgo = Date.now() - 7 * 86400_000
   const week = entries.filter((e) => new Date(e.timestamp) >= weekAgo).length
-  const avg = Math.round((entries.reduce((s, e) => s + e.weight, 0) / total) * 10) / 10
+  const weighted = entries.filter((e) => e.weight != null)
+  const avg = weighted.length
+    ? Math.round((weighted.reduce((s, e) => s + e.weight, 0) / weighted.length) * 10) / 10 + 'g'
+    : '—'
 
   view.innerHTML = `
     <div class="stat-tiles">
       <div class="tile"><strong>${total}</strong><span>total eggs</span></div>
       <div class="tile"><strong>${week}</strong><span>last 7 days</span></div>
-      <div class="tile"><strong>${avg}g</strong><span>avg weight</span></div>
+      <div class="tile"><strong>${avg}</strong><span>avg weight</span></div>
     </div>
     <div class="chart-card"><h3>Eggs per day <small>· last 14 days</small></h3><canvas id="c-daily"></canvas></div>
     <div class="chart-card"><h3>Average weight <small>· all time</small></h3><canvas id="c-weight"></canvas></div>
@@ -75,12 +78,15 @@ function buildDailyChart(view, byDay) {
 }
 
 function buildWeightChart(view, byDay) {
-  const keys = [...byDay.keys()].sort()
+  // Only days with at least one weighed egg contribute a point.
+  const keys = [...byDay.keys()]
+    .filter((k) => byDay.get(k).some((e) => e.weight != null))
+    .sort()
   const labels = keys.map((k) =>
     new Date(`${k}T12:00:00`).toLocaleDateString([], { month: 'numeric', day: 'numeric' }),
   )
   const averages = keys.map((k) => {
-    const day = byDay.get(k)
+    const day = byDay.get(k).filter((e) => e.weight != null)
     return Math.round((day.reduce((s, e) => s + e.weight, 0) / day.length) * 10) / 10
   })
   charts.push(

@@ -130,6 +130,24 @@ h1 {
   color: #ddd3c4;
 }
 
+.w-clear {
+  align-self: center;
+  margin-left: 6px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.w-clear.hidden {
+  visibility: hidden; /* keep the space so the readout doesn't shift */
+}
+
 .unit {
   font-size: 1.1rem;
   font-weight: 600;

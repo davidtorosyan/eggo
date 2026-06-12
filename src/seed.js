@@ -20,7 +20,8 @@ export function seed(days = 21) {
       fresh.push({
         id: uid(),
         timestamp: date.toISOString(),
-        weight: Math.round(weight * 10) / 10,
+        // ~10% unweighed: exercises the weightless-egg paths in the UI
+        weight: Math.random() < 0.1 ? null : Math.round(weight * 10) / 10,
         color: chicken.color,
         chicken: Math.random() < 0.7 ? chicken.name : null,
         synced: true, // never try to upload fake data

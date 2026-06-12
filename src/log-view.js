@@ -22,8 +22,11 @@ export function renderLog(view) {
   view.innerHTML = `
     <form id="egg-form" autocomplete="off">
       <div class="field-label weight-head">
-        <span>Weight</span>
-        <span class="weight-readout"><span id="w-value">—</span><span class="unit">g</span></span>
+        <span>Weight <span class="optional">(optional)</span></span>
+        <span class="weight-readout">
+          <span id="w-value">—</span><span class="unit">g</span>
+          <button type="button" id="w-clear" class="w-clear hidden" aria-label="Clear weight">×</button>
+        </span>
       </div>
       <div class="tens-row">
         ${TENS.map(
@@ -72,9 +75,11 @@ export function renderLog(view) {
   const historyEl = view.querySelector('#history')
 
   // --- Weight picker ---
+  const clearButton = view.querySelector('#w-clear')
   function updateWeight() {
     weightValue.textContent = tens === null ? '—' : String(tens * 10 + (ones ?? 0))
     weightValue.classList.toggle('placeholder', tens === null)
+    clearButton.classList.toggle('hidden', tens === null && ones === null)
     view
       .querySelectorAll('[data-tens]')
       .forEach((b) => b.classList.toggle('active', Number(b.dataset.tens) === tens))
@@ -96,6 +101,11 @@ export function renderLog(view) {
       updateWeight()
     }),
   )
+  clearButton.addEventListener('click', () => {
+    tens = null
+    ones = null
+    updateWeight()
+  })
   updateWeight()
 
   // --- Smart chicken picker: hens that lay the selected color come first ---
@@ -119,11 +129,8 @@ export function renderLog(view) {
   // --- Save + undo ---
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
-    if (tens === null) {
-      showStatus('Tap a weight first')
-      return
-    }
-    const weight = tens * 10 + (ones ?? 0)
+    // Weight is optional: no tens selected saves a weightless egg.
+    const weight = tens === null ? null : tens * 10 + (ones ?? 0)
 
     saveButton.disabled = true
     let entry, queued
@@ -142,7 +149,7 @@ export function renderLog(view) {
     }
 
     const offlineNote = APPS_SCRIPT_URL && queued ? ' (offline — will sync later)' : ''
-    showStatus(`Saved ${weight}g${offlineNote}`, entry.id)
+    showStatus(`Saved${weight === null ? '' : ` ${weight}g`}${offlineNote}`, entry.id)
 
     // Reset for the next egg: keep color (clutches often match), clear weight.
     tens = null
@@ -185,7 +192,7 @@ export function renderLog(view) {
         (e) => `
         <li>
           <span class="swatch" style="--swatch:${swatchFor(e.color)}"></span>
-          <span class="h-weight">${e.weight}g</span>
+          <span class="h-weight">${e.weight != null ? `${e.weight}g` : '—'}</span>
           <span class="h-meta">${e.chicken ?? ''}</span>
           <span class="h-time">${formatWhen(e.timestamp)}</span>
           <button type="button" class="h-del" data-id="${e.id}" aria-label="Delete entry">×</button>
