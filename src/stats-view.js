@@ -34,6 +34,7 @@ export function renderStats(view) {
       <div class="tile"><strong>${avg}</strong><span>avg weight</span></div>
     </div>
     <div class="chart-card"><h3>Eggs per day <small>· last 14 days</small></h3><canvas id="c-daily"></canvas></div>
+    <div class="chart-card"><h3>Total eggs <small>· all time</small></h3><canvas id="c-cumulative"></canvas></div>
     <div class="chart-card"><h3>Average weight <small>· all time</small></h3><canvas id="c-weight"></canvas></div>
     <div class="chart-card"><h3>Colors <small>· all time</small></h3><canvas id="c-colors"></canvas></div>
     <div class="chart-card"><h3>By chicken <small>· all time</small></h3><canvas id="c-chickens"></canvas></div>
@@ -47,6 +48,7 @@ export function renderStats(view) {
   }
 
   buildDailyChart(view, byDay)
+  buildCumulativeChart(view, byDay)
   buildWeightChart(view, byDay)
   buildColorChart(view, entries)
   buildChickenChart(view, entries)
@@ -67,6 +69,43 @@ function buildDailyChart(view, byDay) {
       data: {
         labels,
         datasets: [{ data: counts, backgroundColor: ACCENT, borderRadius: 6 }],
+      },
+      options: {
+        aspectRatio: 1.8,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    }),
+  )
+}
+
+function buildCumulativeChart(view, byDay) {
+  const keys = [...byDay.keys()].sort()
+  const labels = []
+  const totals = []
+  let running = 0
+  for (const k of keys) {
+    running += byDay.get(k).length
+    labels.push(
+      new Date(`${k}T12:00:00`).toLocaleDateString([], { month: 'numeric', day: 'numeric' }),
+    )
+    totals.push(running)
+  }
+  charts.push(
+    new Chart(view.querySelector('#c-cumulative'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            data: totals,
+            borderColor: ACCENT,
+            backgroundColor: 'rgb(217 142 50 / 0.15)',
+            fill: true,
+            tension: 0.2,
+            pointRadius: 0,
+          },
+        ],
       },
       options: {
         aspectRatio: 1.8,
