@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local machine-specific notes (never commit — see CLAUDE.md)
+CLAUDE.local.md
+
+# Local env/config overrides
+.env
+.env.local
+
+# Editor/OS noise
+.DS_Store
+Thumbs.db
