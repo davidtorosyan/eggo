@@ -246,15 +246,20 @@ h1 {
   outline-offset: 2px;
 }
 
-/* Chicken selector */
-#chicken {
-  width: 100%;
-  font-size: 1.05rem;
-  padding: 11px 14px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--ink);
+/* Chicken selector — the four hens that lay the chosen color */
+.chicken-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.key.hen {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 12px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Save */
@@ -483,5 +488,9 @@ h1 {
   .tab {
     padding: 7px 11px;
     font-size: 0.9rem;
+  }
+
+  .key.hen {
+    font-size: 0.72rem;
   }
 }

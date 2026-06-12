@@ -52,8 +52,8 @@ export function renderLog(view) {
         ).join('')}
       </div>
 
-      <label class="field-label" for="chicken">Chicken <span class="optional">(optional)</span></label>
-      <select id="chicken"></select>
+      <div class="field-label">Chicken <span class="optional">(optional — tap again to clear)</span></div>
+      <div class="chicken-row" id="chicken-row"></div>
 
       <button type="submit" id="save">Save egg</button>
     </form>
@@ -68,7 +68,7 @@ export function renderLog(view) {
 
   const form = view.querySelector('#egg-form')
   const weightValue = view.querySelector('#w-value')
-  const chickenSelect = view.querySelector('#chicken')
+  const chickenRow = view.querySelector('#chicken-row')
   const saveButton = view.querySelector('#save')
   const statusEl = view.querySelector('#status')
   const todayLine = view.querySelector('#today-line')
@@ -108,23 +108,32 @@ export function renderLog(view) {
   })
   updateWeight()
 
-  // --- Smart chicken picker: hens that lay the selected color come first ---
-  function fillChickenOptions() {
+  // --- Chicken picker: the hens that lay the selected color, as toggle
+  // buttons. Tap to select, tap again to clear; color change resets any
+  // cross-color selection. ---
+  let chicken = null
+  function renderChickens() {
     const color = form.elements.color.value
-    const layers = CHICKENS.filter((c) => c.color === color)
-    const others = CHICKENS.filter((c) => c.color !== color)
-    chickenSelect.innerHTML = `
-      <option value="">Not sure</option>
-      ${layers.map((c) => `<option>${c.name}</option>`).join('')}
-      <optgroup label="Other hens">
-        ${others.map((c) => `<option>${c.name}</option>`).join('')}
-      </optgroup>
-    `
+    const hens = CHICKENS.filter((c) => c.color === color)
+    if (chicken !== null && !hens.some((c) => c.name === chicken)) chicken = null
+    chickenRow.innerHTML = hens
+      .map(
+        (c) =>
+          `<button type="button" class="key hen ${c.name === chicken ? 'active' : ''}"
+                   data-hen="${c.name}">${c.name}</button>`,
+      )
+      .join('')
   }
+  chickenRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-hen]')
+    if (!btn) return
+    chicken = chicken === btn.dataset.hen ? null : btn.dataset.hen
+    renderChickens()
+  })
   form.querySelectorAll('input[name="color"]').forEach((radio) =>
-    radio.addEventListener('change', fillChickenOptions),
+    radio.addEventListener('change', renderChickens),
   )
-  fillChickenOptions()
+  renderChickens()
 
   // --- Save + undo ---
   form.addEventListener('submit', async (e) => {
@@ -139,7 +148,7 @@ export function renderLog(view) {
         timestamp: new Date().toISOString(),
         weight,
         color: form.elements.color.value,
-        chicken: chickenSelect.value || null,
+        chicken,
       }))
     } catch (err) {
       showStatus(`Couldn't save: ${err.message}`)
@@ -154,8 +163,9 @@ export function renderLog(view) {
     // Reset for the next egg: keep color (clutches often match), clear weight.
     tens = null
     ones = null
+    chicken = null
     updateWeight()
-    fillChickenOptions()
+    renderChickens()
     refreshHistory()
   })
 
