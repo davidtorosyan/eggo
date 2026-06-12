@@ -24,8 +24,10 @@ show, not what the CSS says.
 
 ## States to capture
 
-Wipe localStorage first so runs are deterministic. Capture at **390×844**
-(primary phone) unless noted:
+Wipe localStorage first so runs are deterministic. Capture at **393×660**
+unless noted — that's the user's iPhone 15 Pro (393 CSS px wide) with mobile
+Safari's URL bar/toolbar visible, NOT the 852px hardware height. Testing at
+full hardware height hides above-the-fold problems Safari users see:
 
 1. Log view, empty (no data)
 2. Debug tab after seeding (`#d-seed` button)
@@ -43,6 +45,9 @@ Read every screenshot with the Read tool and check:
 
 - **No horizontal overflow at any viewport** — nothing cut off at 320px;
   no sideways scroll. (Regression watch: the header/tabs row.)
+- **Above the fold at 393×660**: the entire log flow — weight picker,
+  color, chicken, Save, status pill, and the today-line — visible without
+  scrolling.
 - **Placeholders can't be mistaken for values** (the big weight field).
 - **No layout shift from state changes** — armed delete, status pill
   appearing, tab switches.

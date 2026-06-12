@@ -21,8 +21,10 @@ export function renderLog(view) {
 
   view.innerHTML = `
     <form id="egg-form" autocomplete="off">
-      <label class="field-label">Weight</label>
-      <div class="weight-display"><span id="w-value">—</span><span class="unit">g</span></div>
+      <div class="field-label weight-head">
+        <span>Weight</span>
+        <span class="weight-readout"><span id="w-value">—</span><span class="unit">g</span></span>
+      </div>
       <div class="tens-row">
         ${TENS.map(
           (t) => `<button type="button" class="key" data-tens="${t}">${t}0s</button>`,
