@@ -192,6 +192,11 @@ h1 {
   transform: scale(0.94);
 }
 
+.key:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .tens-row .key {
   font-size: 0.95rem;
   background: var(--bg);

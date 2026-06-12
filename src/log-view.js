@@ -83,11 +83,11 @@ export function renderLog(view) {
     view
       .querySelectorAll('[data-tens]')
       .forEach((b) => b.classList.toggle('active', Number(b.dataset.tens) === tens))
-    view
-      .querySelectorAll('[data-ones]')
-      .forEach((b) =>
-        b.classList.toggle('active', ones !== null && Number(b.dataset.ones) === ones),
-      )
+    view.querySelectorAll('[data-ones]').forEach((b) => {
+      b.classList.toggle('active', ones !== null && Number(b.dataset.ones) === ones)
+      // Digits only mean something once a tens range is picked
+      b.disabled = tens === null
+    })
   }
   view.querySelectorAll('[data-tens]').forEach((btn) =>
     btn.addEventListener('click', () => {
@@ -97,6 +97,7 @@ export function renderLog(view) {
   )
   view.querySelectorAll('[data-ones]').forEach((btn) =>
     btn.addEventListener('click', () => {
+      if (tens === null) return
       ones = Number(btn.dataset.ones)
       updateWeight()
     }),
