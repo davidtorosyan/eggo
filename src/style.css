@@ -38,6 +38,7 @@ body {
 /* Header + tabs */
 .top {
   display: flex;
+  flex-wrap: wrap; /* tabs drop below the title instead of overflowing */
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -152,6 +153,12 @@ h1 {
   border-color: var(--accent);
 }
 
+/* Faint enough that it can't be mistaken for an entered value */
+#weight::placeholder {
+  color: #ddd3c4;
+  font-weight: 400;
+}
+
 .unit {
   font-size: 1.3rem;
   font-weight: 600;
@@ -235,10 +242,14 @@ h1 {
   opacity: 0.6;
 }
 
-/* Status + undo */
+/* Status + undo — a soft pill so it reads as a toast, not stray text */
 #status {
+  width: fit-content;
   min-height: 1.3em;
-  margin: 12px 0 0;
+  margin: 12px auto 0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, white);
   text-align: center;
   font-weight: 600;
   color: var(--accent-deep);
@@ -313,9 +324,9 @@ h1 {
 
 .h-del {
   flex: none;
-  min-width: 34px;
-  height: 34px;
-  padding: 0 8px;
+  width: 44px; /* fixed: the armed state must not shift the row */
+  height: 42px;
+  padding: 0;
   border: none;
   border-radius: 10px;
   background: transparent;
@@ -328,7 +339,7 @@ h1 {
 .h-del.arm {
   background: var(--danger);
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -370,6 +381,13 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
+}
+
+.chart-card h3 small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .empty {
@@ -416,4 +434,16 @@ h1 {
   text-align: center;
   font-weight: 600;
   color: var(--ink-soft);
+}
+
+/* Small phones: tighter card and tabs so nothing overflows */
+@media (max-width: 374px) {
+  .card {
+    padding: 16px 14px;
+  }
+
+  .tab {
+    padding: 7px 11px;
+    font-size: 0.9rem;
+  }
 }

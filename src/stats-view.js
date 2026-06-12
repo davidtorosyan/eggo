@@ -30,10 +30,10 @@ export function renderStats(view) {
       <div class="tile"><strong>${week}</strong><span>last 7 days</span></div>
       <div class="tile"><strong>${avg}g</strong><span>avg weight</span></div>
     </div>
-    <div class="chart-card"><h3>Eggs per day</h3><canvas id="c-daily"></canvas></div>
-    <div class="chart-card"><h3>Average weight</h3><canvas id="c-weight"></canvas></div>
-    <div class="chart-card"><h3>Colors</h3><canvas id="c-colors"></canvas></div>
-    <div class="chart-card"><h3>By chicken</h3><canvas id="c-chickens"></canvas></div>
+    <div class="chart-card"><h3>Eggs per day <small>· last 14 days</small></h3><canvas id="c-daily"></canvas></div>
+    <div class="chart-card"><h3>Average weight <small>· all time</small></h3><canvas id="c-weight"></canvas></div>
+    <div class="chart-card"><h3>Colors <small>· all time</small></h3><canvas id="c-colors"></canvas></div>
+    <div class="chart-card"><h3>By chicken <small>· all time</small></h3><canvas id="c-chickens"></canvas></div>
   `
 
   const byDay = new Map()
@@ -124,7 +124,7 @@ function buildColorChart(view, entries) {
         ],
       },
       options: {
-        aspectRatio: 1.8,
+        aspectRatio: 2.4,
         plugins: { legend: { position: 'right' } },
       },
     }),

@@ -45,6 +45,10 @@ out → logged in seconds.
 
 ## Verifying changes
 
+- After any UI change (styles, layout, markup, charts), run the **ui-review**
+  skill (`.claude/skills/ui-review`) before committing — screenshot-driven
+  regression review across states and viewports.
+
 - After changing user-facing behavior, verify by driving the real app in a
   headless browser — don't stop at "the build passed."
 - **Test via the LAN IP URL (`http://<detected-ip>:5173`), never localhost.**
