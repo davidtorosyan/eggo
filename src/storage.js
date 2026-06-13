@@ -1,10 +1,13 @@
-import { APPS_SCRIPT_URL } from './config.js'
+import { flush } from './sync.js'
 
 const ENTRIES_KEY = 'eggo-entries'
+const PENDING_KEY = 'eggo-pending-deletes'
+const LASTPULL_KEY = 'eggo-last-pull'
 
 // All entries live in localStorage as the local source of truth for the UI.
 // Each entry: { id, timestamp, weight, color, chicken, synced, seeded? }.
-// `synced: false` marks entries still waiting to be POSTed to the Sheet.
+// `synced: false` marks a local add not yet pushed to the Sheet. Sync itself
+// lives in sync.js; this module is the local-storage primitive layer.
 
 export function getEntries() {
   try {
@@ -18,6 +21,28 @@ export function setEntries(entries) {
   localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries))
 }
 
+// Ids of entries that were synced and then deleted locally — a tombstone queue
+// so a pull won't re-add them before the backend delete lands.
+export function getPendingDeletes() {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY)) ?? []
+  } catch {
+    return []
+  }
+}
+
+export function setPendingDeletes(ids) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify(ids))
+}
+
+export function getLastPull() {
+  return localStorage.getItem(LASTPULL_KEY)
+}
+
+export function setLastPull(iso) {
+  localStorage.setItem(LASTPULL_KEY, iso)
+}
+
 // crypto.randomUUID is unavailable in insecure contexts (plain-HTTP LAN
 // testing on a phone), so fall back to a timestamp+random id.
 export function uid() {
@@ -27,45 +52,24 @@ export function uid() {
   )
 }
 
-// Returns { entry, queued } — queued means the entry is saved locally but not
-// yet in the Sheet (endpoint unconfigured, or offline in the coop).
-export async function saveEgg(data) {
+// Save locally and return immediately; the push happens in the background so
+// the Save button never waits on the network. Returns { entry }.
+export function saveEgg(data) {
   const entry = { id: uid(), synced: false, ...data }
   setEntries([...getEntries(), entry])
-  const allSynced = await trySync()
-  return { entry, queued: !allSynced }
+  void flush()
+  return { entry }
 }
 
-// Local-only: entries already synced to the Sheet stay in the Sheet for now.
+// Remove locally. If the entry was already on the backend, queue a remote
+// delete so the deletion propagates to other devices.
 export function deleteEgg(id) {
-  setEntries(getEntries().filter((e) => e.id !== id))
-}
-
-// Push all unsynced entries; returns true if everything is synced after.
-export async function trySync() {
-  if (!APPS_SCRIPT_URL) return false
   const entries = getEntries()
-  for (const entry of entries) {
-    if (entry.synced) continue
-    try {
-      await postEgg(entry)
-      entry.synced = true
-    } catch {
-      setEntries(entries)
-      return false
-    }
+  const entry = entries.find((e) => e.id === id)
+  setEntries(entries.filter((e) => e.id !== id))
+  if (entry && entry.synced && !entry.seeded) {
+    const pending = getPendingDeletes()
+    if (!pending.includes(id)) setPendingDeletes([...pending, id])
   }
-  setEntries(entries)
-  return true
-}
-
-async function postEgg(entry) {
-  const { timestamp, weight, color, chicken } = entry
-  // text/plain avoids a CORS preflight, which Apps Script doesn't handle.
-  const res = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ timestamp, weight, color, chicken }),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  void flush()
 }

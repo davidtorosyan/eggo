@@ -13,7 +13,7 @@ for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++)
 }
 const ONES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-export function renderLog(view) {
+export function renderLog(view, signal) {
   // Two-tap keyboard-free weight entry: a tens button (20s..70s) plus an
   // optional ones digit. Tens-only saves as a round weight (50s -> 50g).
   let tens = null
@@ -142,10 +142,10 @@ export function renderLog(view) {
     // Weight is optional: no tens selected saves a weightless egg.
     const weight = tens === null ? null : tens * 10 + (ones ?? 0)
 
-    saveButton.disabled = true
-    let entry, queued
+    let entry
     try {
-      ;({ entry, queued } = await saveEgg({
+      // Saves locally and returns instantly; the push happens in the background.
+      ;({ entry } = saveEgg({
         timestamp: new Date().toISOString(),
         weight,
         color: form.elements.color.value,
@@ -154,11 +154,10 @@ export function renderLog(view) {
     } catch (err) {
       showStatus(`Couldn't save: ${err.message}`)
       return
-    } finally {
-      saveButton.disabled = false
     }
 
-    const offlineNote = APPS_SCRIPT_URL && queued ? ' (offline — will sync later)' : ''
+    const offlineNote =
+      APPS_SCRIPT_URL && !navigator.onLine ? ' (offline — will sync later)' : ''
     showStatus(`Saved${weight === null ? '' : ` ${weight}g`}${offlineNote}`, entry.id)
 
     // Reset for the next egg: keep color (clutches often match), clear weight.
@@ -230,6 +229,11 @@ export function renderLog(view) {
   })
 
   refreshHistory()
+
+  // A background sync that changed local data refreshes the history list only,
+  // leaving any in-progress form entry untouched. The signal unbinds this when
+  // the view is torn down (tab switch).
+  window.addEventListener('eggo:historychanged', refreshHistory, { signal })
 }
 
 function isToday(entry) {

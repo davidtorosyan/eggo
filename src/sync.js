@@ -1,0 +1,195 @@
+// Background sync between localStorage and the Apps Script / Sheet backend.
+//
+// Design: saving writes locally and returns instantly; pushing happens here in
+// the background. The backend is the shared source of truth — a previously
+// synced entry that is gone from the backend was deleted on another device, so
+// we drop it locally. Never-synced local entries are always preserved + pushed.
+// Dev-only `seeded` entries are local fake data, outside the sync domain.
+import { APPS_SCRIPT_URL } from './config.js'
+import {
+  getEntries,
+  setEntries,
+  getPendingDeletes,
+  setPendingDeletes,
+  setLastPull,
+} from './storage.js'
+
+const ENDPOINT = APPS_SCRIPT_URL
+
+// --- Pure core (no I/O): merge local + remote into the new local state, and
+// prune tombstones (pendingDeletes) already gone from the backend.
+// Returns { entries, pendingDeletes, added, removed } where added/removed count
+// what a pull changed, so the UI can decide whether to notify.
+export function reconcile(local, remote, pendingDeletes = []) {
+  const pending = new Set(pendingDeletes)
+  const remoteIds = new Set(remote.map((e) => e.id))
+  const localIds = new Set(local.map((e) => e.id))
+  const entries = []
+  let removed = 0
+
+  for (const e of local) {
+    if (e.seeded) {
+      entries.push(e) // dev-only local data, never synced or pruned
+      continue
+    }
+    if (pending.has(e.id)) continue // tombstoned; awaiting remote delete
+    const inRemote = remoteIds.has(e.id)
+    if (e.synced) {
+      if (inRemote) entries.push(e) // unchanged (entries are immutable)
+      else removed++ // remote-deleted elsewhere → drop
+    } else {
+      entries.push(inRemote ? { ...e, synced: true } : e) // new local add
+    }
+  }
+
+  let added = 0
+  for (const r of remote) {
+    if (localIds.has(r.id) || pending.has(r.id)) continue
+    entries.push({ ...r, synced: true }) // pulled from the backend
+    added++
+  }
+
+  // Keep only tombstones still present remotely; the rest are already gone.
+  const newPending = pendingDeletes.filter((id) => remoteIds.has(id))
+  return { entries, pendingDeletes: newPending, added, removed }
+}
+
+// --- Network helpers (text/plain avoids a CORS preflight Apps Script can't
+// handle). Use the global fetch so Node tests can drive these directly.
+async function fetchRemote() {
+  const res = await fetch(ENDPOINT)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+async function post(body) {
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+function pushEntry(e) {
+  return post({
+    id: e.id,
+    timestamp: e.timestamp,
+    weight: e.weight ?? null,
+    color: e.color,
+    chicken: e.chicken ?? null,
+  })
+}
+
+function deleteRemote(id) {
+  return post({ action: 'delete', id })
+}
+
+// --- flush: push unsynced entries, then drain queued deletes. Serialized so
+// overlapping triggers (save + online event) don't double-run; a flush request
+// that arrives mid-flight re-runs once after, to pick up newly queued work.
+let flushing = null
+let flushAgain = false
+
+export function flush() {
+  if (!ENDPOINT) return Promise.resolve(false)
+  if (flushing) {
+    flushAgain = true
+    return flushing
+  }
+  flushing = (async () => {
+    let ok = false
+    do {
+      flushAgain = false
+      ok = await doFlush()
+    } while (flushAgain && ok)
+    return ok
+  })().finally(() => {
+    flushing = null
+  })
+  return flushing
+}
+
+async function doFlush() {
+  const entries = getEntries()
+  let changed = false
+  for (const e of entries) {
+    if (e.synced || e.seeded) continue
+    try {
+      await pushEntry(e)
+      e.synced = true
+      changed = true
+    } catch {
+      if (changed) setEntries(entries)
+      return false // network down — leave the rest for a later retry
+    }
+  }
+  if (changed) setEntries(entries)
+
+  const pending = getPendingDeletes()
+  if (pending.length) {
+    const remaining = []
+    for (const id of pending) {
+      try {
+        await deleteRemote(id)
+      } catch {
+        remaining.push(id)
+      }
+    }
+    setPendingDeletes(remaining)
+    if (remaining.length) return false
+  }
+  return true
+}
+
+// --- pull: fetch the backend, reconcile into local, then flush local changes.
+// Returns { added, removed, ok }. Serialized like flush.
+let pulling = null
+
+export function pull() {
+  if (!ENDPOINT) return Promise.resolve({ added: 0, removed: 0, ok: false })
+  if (pulling) return pulling
+  pulling = doPull().finally(() => {
+    pulling = null
+  })
+  return pulling
+}
+
+async function doPull() {
+  let remote
+  try {
+    remote = await fetchRemote()
+  } catch {
+    return { added: 0, removed: 0, ok: false }
+  }
+  const { entries, pendingDeletes, added, removed } = reconcile(
+    getEntries(),
+    remote,
+    getPendingDeletes(),
+  )
+  setEntries(entries)
+  setPendingDeletes(pendingDeletes)
+  setLastPull(new Date().toISOString())
+  await flush() // push anything still local-only + drain deletes
+  return { added, removed, ok: true }
+}
+
+// Backend row count, for the Debug tab. Throws if unreachable.
+export async function remoteCount() {
+  const rows = await fetchRemote()
+  return rows.length
+}
+
+// --- Debug-only backend pokes (used by the dev Debug tab to force divergence
+// between local and the Sheet). Not used by the normal app flow.
+export function clearRemote() {
+  return post({ action: 'clear' })
+}
+
+export function upsertRemote(entry) {
+  return post(entry)
+}
+
+export function deleteRemoteById(id) {
+  return post({ action: 'delete', id })
+}

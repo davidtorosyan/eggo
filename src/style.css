@@ -309,6 +309,66 @@ h1 {
   opacity: 1;
 }
 
+/* Sync indicator: a small dot beside the title. Invisible when idle/synced,
+   amber pulse while syncing, muted gray when offline. Quiet by design. */
+.sync-status {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: transparent;
+  vertical-align: middle;
+  transition: background 0.2s;
+}
+.sync-status.syncing {
+  background: var(--accent);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+.sync-status.offline {
+  background: var(--ink-soft);
+  opacity: 0.5;
+}
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-status.syncing {
+    animation: none;
+  }
+}
+
+/* Transient sync notification, slides up from the bottom. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translate(-50%, 16px);
+  max-width: calc(100% - 32px);
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 6px 20px rgb(61 50 41 / 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    transform 0.25s;
+  z-index: 10;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .undo {
   border: none;
   background: none;

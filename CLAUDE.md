@@ -31,13 +31,17 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   whole page; an amber "Showing: X ×" pill clears it (one filter at a time).
   Hen axis labels have an egg-color dot (custom canvas plugin `henDots`).
 - **Debug** (`debug-view.js`): **dev builds only** (gated by `import.meta.env.DEV`,
-  dropped from prod). Seed/clear fake data, wipe all, and a **bulk import**
-  textarea (see format below).
+  dropped from prod). Tiles (entries / unsynced / pending-del / backend count /
+  seeded / last-pull); **Sync** (Pull, Push, Clear backend); **Simulate
+  divergence** (clear-local-only, add phantom backend row, delete one backend row
+  only, mark all unsynced) for testing reconciliation by hand; seed/clear fake
+  data, wipe all, and a **bulk import** textarea (see format below).
 
-Backend is **live**: `APPS_SCRIPT_URL` in `config.js` points at the deployed
-Apps Script web app, and `storage.trySync()` POSTs unsynced entries to it. New
-entries still queue in localStorage as `synced: false` first, then flip to
-`synced: true` once the POST succeeds (so offline saves aren't lost).
+Backend sync is **live and two-way** (`src/sync.js`). The flow is local-first and
+quiet (see Architecture → Sync below): saving writes localStorage and returns
+instantly; pushing/pulling happen in the background. A small dot beside the title
+shows sync state (idle = invisible, amber = syncing, gray = offline); a bottom
+toast announces when a pull changed data ("Loaded N eggs from the cloud").
 
 ## Data model
 
@@ -48,6 +52,13 @@ Entry (localStorage key `eggo-entries`, array):
 ```
 - `weight` and `chicken` are both nullable; stats/avg/weight-chart skip nulls.
 - `uid()` in `storage.js` is used for ids (NOT `crypto.randomUUID` — see below).
+  The `id` is the cross-device identity key and is persisted to the Sheet.
+- `synced: false` = a local add not yet on the backend. `seeded` entries are
+  dev-only local fake data — never pushed, never pruned by a pull.
+- Two more localStorage keys: `eggo-pending-deletes` (ids of synced entries
+  deleted locally, awaiting a backend delete — a tombstone queue) and
+  `eggo-last-pull` (ISO time of the last successful pull).
+- **Sheet schema** (row 1 = header): `[id, timestamp, weight, color, chicken]`.
 - Flock roster + each hen's egg color live in `config.js` (`CHICKENS`). The
   color drives the smart chicken picker.
 
@@ -71,10 +82,28 @@ Imported entries get noon + 1min/egg timestamps (notes have no times).
 - **Storage:** a Google Sheet. The static site POSTs to a **Google Apps Script
   web app** (`apps-script/Code.js`) attached to the Sheet — the Sheets API can't
   take anonymous writes and OAuth can't be embedded in a public page. Reads can
-  be public-sheet or via the same script. The script handles `doGet` (all rows),
-  `doPost` append, and `doPost` with `{action:'delete', timestamp}` (deletes
-  rows matching that ISO timestamp — used for admin cleanup of test rows).
+  be public-sheet or via the same script. The script handles `doGet` (all rows as
+  objects), `doPost` upsert-by-id (idempotent — retries never duplicate),
+  `{action:'delete', id}`, and `{action:'clear'}` (+ optional `batch`).
 - Offline-friendly: entries queue locally and sync when the endpoint is reachable.
+
+### Sync (`src/sync.js`)
+
+Local-first and quiet. `storage.js` is the local primitive layer; `sync.js` owns
+the network and the merge.
+
+- **Save is instant:** `saveEgg`/`deleteEgg` write localStorage and fire
+  `flush()` without awaiting — the Save button never blocks on the network.
+- **`flush()`** pushes every `synced:false` entry (idempotent upsert), then drains
+  the `pending-deletes` tombstones; serialized so overlapping triggers can't
+  double-run. **`pull()`** GETs all rows, runs the pure **`reconcile()`**, persists,
+  then flushes. Triggers: app load, `online`, and `visibilitychange`.
+- **`reconcile(local, remote, pendingDeletes)`** is the pure, unit-tested core.
+  **Backend is the shared source of truth:** a previously-synced entry missing
+  from the backend was deleted elsewhere → dropped locally (deletes propagate).
+  Never-synced local entries are always kept + pushed; `seeded` entries pass
+  through untouched. Entries are treated as immutable (no edit feature), so an id
+  in both sides is identical — no field-level conflict resolution.
 
 ### Managing the Apps Script (clasp)
 
@@ -95,6 +124,10 @@ in `apps-script/Code.js` and can be deployed from the CLI — no manual paste.
 
 - `npm run dev` — Vite dev server, binds to LAN (`--host`).
 - `npm run build` — prod build to `dist/`.
+- `npm test` — pure unit tests (Node's built-in `node:test`, zero deps), mainly
+  `reconcile()` (`test/unit/`). Fast, no network.
+- `npm run test:e2e` — sync round-trip against the **live** Sheet (`test/e2e/`).
+  **Destructive** — clears the Sheet before/after (data is disposable for now).
 
 ## Development workflow
 
@@ -134,11 +167,16 @@ in `apps-script/Code.js` and can be deployed from the CLI — no manual paste.
 
 Done: dev seed tools, today view + history, undo/delete, smart chicken picker,
 keyboard-free weight picker, stats + charts, click-to-filter, bulk import.
-Backend live: Sheet + Apps Script deployed, `APPS_SCRIPT_URL` set, sync verified
-E2E (append + delete), script now clasp-managed from `apps-script/`.
+Backend live + clasp-managed from `apps-script/`. **Two-way background sync** done:
+instant local save, load-from-backend on new devices, id-keyed reconcile with
+deletes propagating (backend = shared truth), sync indicator + toast, debug
+divergence tools, unit + live-Sheet e2e tests.
 
 Pending: **PWA / install-to-home-screen + offline**; **deploy the frontend** —
 create the GitHub repo, enable Pages (source: GitHub Actions via the existing
-`deploy.yml`). Sync itself is done.
+`deploy.yml`).
+
+Later (not yet needed): a **dedicated test Sheet + second deployment** so
+`test:e2e` stops clobbering real data once eggs accumulate.
 
 Skipped: QR code on dev start, CSV export.

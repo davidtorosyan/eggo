@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "test": "node --test \"test/unit/**/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/**/*.test.js\""
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0",
