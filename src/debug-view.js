@@ -44,37 +44,38 @@ export function renderDebug(view) {
       <div class="tile"><strong>${lastPullText}</strong><span>last pull</span></div>
     </div>
 
-    <div class="field-label">Backend: ${debug ? 'DEBUG 🧪' : 'PROD'}</div>
+    <div class="field-label">Backend</div>
     <div class="debug-actions">
-      <button type="button" class="debug-btn" id="d-toggle-backend">
-        Switch to ${debug ? 'PROD' : 'DEBUG 🧪'} backend
-      </button>
+      <button type="button" class="debug-btn wide backend-toggle ${debug ? 'on-debug' : ''}"
+        id="d-toggle-backend">${debug ? 'DEBUG 🧪' : 'PROD'} — tap to use ${debug ? 'PROD' : 'DEBUG 🧪'}</button>
     </div>
 
     <div class="field-label">Sync</div>
     <div class="debug-actions">
-      <button type="button" class="debug-btn" id="d-pull">Pull from backend</button>
-      <button type="button" class="debug-btn" id="d-push">Push now</button>
-      <button type="button" class="debug-btn danger" id="d-clear-backend">Clear backend rows</button>
+      <button type="button" class="debug-btn" id="d-pull">Pull</button>
+      <button type="button" class="debug-btn" id="d-push">Push</button>
+      <button type="button" class="debug-btn danger wide" id="d-clear-backend">Clear backend rows</button>
     </div>
 
     <div class="field-label">Simulate divergence</div>
     <div class="debug-actions">
-      <button type="button" class="debug-btn" id="d-clear-local">Clear local only (keep backend)</button>
-      <button type="button" class="debug-btn" id="d-phantom">Add phantom backend row</button>
-      <button type="button" class="debug-btn" id="d-del-backend">Delete one row on backend only</button>
-      <button type="button" class="debug-btn" id="d-unsync">Mark all local unsynced</button>
+      <button type="button" class="debug-btn" id="d-clear-local">Clear local</button>
+      <button type="button" class="debug-btn" id="d-phantom">Phantom row</button>
+      <button type="button" class="debug-btn" id="d-del-backend">Drop 1 on backend</button>
+      <button type="button" class="debug-btn" id="d-unsync">Mark unsynced</button>
     </div>
 
-    <div class="field-label">Seed &amp; import</div>
+    <div class="field-label">Local data</div>
     <div class="debug-actions">
-      <button type="button" class="debug-btn" id="d-seed">Seed 21 days of fake eggs</button>
-      <button type="button" class="debug-btn" id="d-clear-seed">Remove seeded entries</button>
-      <button type="button" class="debug-btn danger" id="d-wipe">Wipe ALL local data</button>
+      <button type="button" class="debug-btn" id="d-seed">Seed 21 days</button>
+      <button type="button" class="debug-btn" id="d-clear-seed">Remove seeded</button>
+      <button type="button" class="debug-btn danger wide" id="d-wipe">Wipe ALL local data</button>
     </div>
-    <textarea id="d-import-text" rows="6" spellcheck="false"
+
+    <div class="field-label">Import</div>
+    <textarea id="d-import-text" rows="4" spellcheck="false"
       placeholder="June 12&#10;Egg (brown) - 46g - Goldilocks&#10;Egg (olive) - 30g"></textarea>
-    <button type="button" class="debug-btn" id="d-import">Import</button>
+    <button type="button" class="debug-btn wide" id="d-import">Import</button>
     <p class="debug-note" id="d-note"></p>
   `
 

@@ -526,12 +526,13 @@ h1 {
 /* Debug tab */
 .debug-actions {
   display: grid;
+  grid-template-columns: 1fr 1fr; /* pack single actions 2-up to cut the height */
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .debug-btn {
-  padding: 14px;
+  padding: 11px 10px;
   font: inherit;
   font-weight: 600;
   color: var(--ink);
@@ -541,12 +542,28 @@ h1 {
   cursor: pointer;
 }
 
+/* Span the full row — for the backend toggle, destructive actions, and the
+   standalone Import button (width:100% covers the non-grid case). */
+.debug-btn.wide {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .debug-btn:active {
   border-color: var(--accent);
 }
 
 .debug-btn.danger {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
+}
+
+/* Backend toggle doubles as the active-backend indicator: amber when on the
+   throwaway debug Sheet so you can't forget you're off production. */
+.debug-btn.backend-toggle.on-debug {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, white);
 }
 
 .debug-btn.danger.arm {
