@@ -32,10 +32,11 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   Hen axis labels have an egg-color dot (custom canvas plugin `henDots`).
 - **Debug** (`debug-view.js`): **dev builds only** (gated by `import.meta.env.DEV`,
   dropped from prod). Tiles (entries / unsynced / pending-del / backend count /
-  seeded / last-pull); **Sync** (Pull, Push, Clear backend); **Simulate
-  divergence** (clear-local-only, add phantom backend row, delete one backend row
-  only, mark all unsynced) for testing reconciliation by hand; seed/clear fake
-  data, wipe all, and a **bulk import** textarea (see format below).
+  seeded / last-pull); a **Backend toggle** (prod ↔ throwaway debug Sheet —
+  clears local and reloads from the selected one); **Sync** (Pull, Push, Clear
+  backend); **Simulate divergence** (clear-local-only, add phantom backend row,
+  delete one backend row only, mark all unsynced) for testing reconciliation by
+  hand; seed/clear fake data, wipe all, and a **bulk import** textarea (below).
 
 Backend sync is **live and two-way** (`src/sync.js`). The flow is local-first and
 quiet (see Architecture → Sync below): saving writes localStorage and returns
@@ -55,9 +56,10 @@ Entry (localStorage key `eggo-entries`, array):
   The `id` is the cross-device identity key and is persisted to the Sheet.
 - `synced: false` = a local add not yet on the backend. `seeded` entries are
   dev-only local fake data — never pushed, never pruned by a pull.
-- Two more localStorage keys: `eggo-pending-deletes` (ids of synced entries
-  deleted locally, awaiting a backend delete — a tombstone queue) and
-  `eggo-last-pull` (ISO time of the last successful pull).
+- More localStorage keys: `eggo-pending-deletes` (ids of synced entries deleted
+  locally, awaiting a backend delete — a tombstone queue), `eggo-last-pull` (ISO
+  time of the last successful pull), and `eggo-debug-backend` (`'true'` routes
+  sync to `DEBUG_APPS_SCRIPT_URL`; only ever set via the dev Debug tab).
 - **Sheet schema** (row 1 = header): `[id, timestamp, weight, color, chicken]`.
 - Flock roster + each hen's egg color live in `config.js` (`CHICKENS`). The
   color drives the smart chicken picker.
@@ -120,14 +122,24 @@ in `apps-script/Code.js` and can be deployed from the CLI — no manual paste.
 - `appsscript.json` is the pulled manifest (`ANYONE_ANONYMOUS` web app); don't
   hand-edit unless changing deployment settings.
 
+**Two backends.** Production (the real Sheet, `APPS_SCRIPT_URL`) and a throwaway
+**debug** Sheet (`DEBUG_APPS_SCRIPT_URL`) used by e2e tests + the Debug-tab
+toggle. Both run the *same* `apps-script/Code.js`: `apps-script-debug/.clasp.json`
+(gitignored) points a second script id at `rootDir: ../apps-script`, so to ship
+to debug: `cd apps-script-debug && npx clasp push -f && npx clasp deploy -i <id>`.
+A brand-new script's web app returns "access denied" until its owner authorizes
+it once in the editor and publishes it with "Anyone" access (clasp can't grant
+the anonymous-execution consent).
+
 ## Commands
 
 - `npm run dev` — Vite dev server, binds to LAN (`--host`).
 - `npm run build` — prod build to `dist/`.
 - `npm test` — pure unit tests (Node's built-in `node:test`, zero deps), mainly
   `reconcile()` (`test/unit/`). Fast, no network.
-- `npm run test:e2e` — sync round-trip against the **live** Sheet (`test/e2e/`).
-  **Destructive** — clears the Sheet before/after (data is disposable for now).
+- `npm run test:e2e` — sync round-trip against the **debug** backend (`test/e2e/`,
+  via `DEBUG_APPS_SCRIPT_URL` + the debug-backend flag). Destructive to the debug
+  Sheet only — production is never touched.
 
 ## Development workflow
 

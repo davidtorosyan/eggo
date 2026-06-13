@@ -17,11 +17,10 @@ globalThis.localStorage = (() => {
   }
 })()
 
-const { getEntries, setEntries, getPendingDeletes, deleteEgg } = await import(
-  '../../src/storage.js'
-)
+const { getEntries, setEntries, getPendingDeletes, deleteEgg, setDebugBackend } =
+  await import('../../src/storage.js')
 const { pull, flush } = await import('../../src/sync.js')
-const { APPS_SCRIPT_URL: endpoint } = await import('../../src/config.js')
+const { DEBUG_APPS_SCRIPT_URL: endpoint } = await import('../../src/config.js')
 
 const post = (body) =>
   fetch(endpoint, {
@@ -43,8 +42,10 @@ const entry = (id, extra = {}) => ({
 })
 
 test('sync engine round-trips against the live Sheet', async (t) => {
-  assert.ok(endpoint, 'APPS_SCRIPT_URL must be configured')
+  assert.ok(endpoint, 'DEBUG_APPS_SCRIPT_URL must be configured')
   localStorage.clear()
+  // After the clear, so the flag survives: route ALL sync at the debug backend.
+  setDebugBackend(true)
   await clearBackend()
 
   await t.test('flush pushes unsynced local entries', async () => {

@@ -8,6 +8,8 @@ import {
   getPendingDeletes,
   setPendingDeletes,
   getLastPull,
+  isDebugBackend,
+  setDebugBackend,
   uid,
 } from './storage.js'
 import {
@@ -26,6 +28,7 @@ export function renderDebug(view) {
   const seeded = entries.filter((e) => e.seeded).length
   const unsynced = entries.filter((e) => !e.synced).length
   const pending = getPendingDeletes().length
+  const debug = isDebugBackend()
   const lastPull = getLastPull()
   const lastPullText = lastPull
     ? new Date(lastPull).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -39,6 +42,13 @@ export function renderDebug(view) {
       <div class="tile"><strong id="d-backend">…</strong><span>backend</span></div>
       <div class="tile"><strong>${seeded}</strong><span>seeded</span></div>
       <div class="tile"><strong>${lastPullText}</strong><span>last pull</span></div>
+    </div>
+
+    <div class="field-label">Backend: ${debug ? 'DEBUG 🧪' : 'PROD'}</div>
+    <div class="debug-actions">
+      <button type="button" class="debug-btn" id="d-toggle-backend">
+        Switch to ${debug ? 'PROD' : 'DEBUG 🧪'} backend
+      </button>
     </div>
 
     <div class="field-label">Sync</div>
@@ -84,6 +94,20 @@ export function renderDebug(view) {
     const el = view.querySelector('#d-backend')
     if (el) el.textContent = text
   }
+
+  // --- Backend toggle: switch endpoint, then reload local from it so you see a
+  // clean view of the selected backend (clears local — fine for a dev tool). ---
+  on('#d-toggle-backend', async () => {
+    const toDebug = !isDebugBackend()
+    setDebugBackend(toDebug)
+    setEntries([])
+    setPendingDeletes([])
+    note.textContent = `Switching to ${toDebug ? 'DEBUG' : 'PROD'}…`
+    await pull()
+    rerender(
+      `Now on ${toDebug ? 'DEBUG 🧪' : 'PROD'} backend — local cleared and reloaded from it.`,
+    )
+  })
 
   // --- Sync ---
   on('#d-pull', async () => {

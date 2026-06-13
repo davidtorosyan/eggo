@@ -5,16 +5,22 @@
 // synced entry that is gone from the backend was deleted on another device, so
 // we drop it locally. Never-synced local entries are always preserved + pushed.
 // Dev-only `seeded` entries are local fake data, outside the sync domain.
-import { APPS_SCRIPT_URL } from './config.js'
+import { APPS_SCRIPT_URL, DEBUG_APPS_SCRIPT_URL } from './config.js'
 import {
   getEntries,
   setEntries,
   getPendingDeletes,
   setPendingDeletes,
   setLastPull,
+  isDebugBackend,
 } from './storage.js'
 
-const ENDPOINT = APPS_SCRIPT_URL
+// Resolved per call so the Debug-tab backend toggle takes effect immediately.
+function endpoint() {
+  return isDebugBackend() && DEBUG_APPS_SCRIPT_URL
+    ? DEBUG_APPS_SCRIPT_URL
+    : APPS_SCRIPT_URL
+}
 
 // --- Pure core (no I/O): merge local + remote into the new local state, and
 // prune tombstones (pendingDeletes) already gone from the backend.
@@ -57,13 +63,13 @@ export function reconcile(local, remote, pendingDeletes = []) {
 // --- Network helpers (text/plain avoids a CORS preflight Apps Script can't
 // handle). Use the global fetch so Node tests can drive these directly.
 async function fetchRemote() {
-  const res = await fetch(ENDPOINT)
+  const res = await fetch(endpoint())
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
 async function post(body) {
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch(endpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(body),
@@ -92,7 +98,7 @@ let flushing = null
 let flushAgain = false
 
 export function flush() {
-  if (!ENDPOINT) return Promise.resolve(false)
+  if (!endpoint()) return Promise.resolve(false)
   if (flushing) {
     flushAgain = true
     return flushing
@@ -147,7 +153,7 @@ async function doFlush() {
 let pulling = null
 
 export function pull() {
-  if (!ENDPOINT) return Promise.resolve({ added: 0, removed: 0, ok: false })
+  if (!endpoint()) return Promise.resolve({ added: 0, removed: 0, ok: false })
   if (pulling) return pulling
   pulling = doPull().finally(() => {
     pulling = null

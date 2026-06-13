@@ -103,6 +103,12 @@ function ensureHeader_(sheet) {
   }
 }
 
+// Run this once from the editor (Run ▸ authorize) on a fresh script to grant the
+// Spreadsheet permission that an anonymous "execute as me" web app needs.
+function authorize() {
+  SpreadsheetApp.getActiveSpreadsheet().getName();
+}
+
 function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
     ContentService.MimeType.JSON,

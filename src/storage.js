@@ -3,6 +3,7 @@ import { flush } from './sync.js'
 const ENTRIES_KEY = 'eggo-entries'
 const PENDING_KEY = 'eggo-pending-deletes'
 const LASTPULL_KEY = 'eggo-last-pull'
+const DEBUG_BACKEND_KEY = 'eggo-debug-backend'
 
 // All entries live in localStorage as the local source of truth for the UI.
 // Each entry: { id, timestamp, weight, color, chicken, synced, seeded? }.
@@ -41,6 +42,17 @@ export function getLastPull() {
 
 export function setLastPull(iso) {
   localStorage.setItem(LASTPULL_KEY, iso)
+}
+
+// When true, sync targets the throwaway debug backend instead of production.
+// Only ever set via the dev-only Debug tab (never present in prod builds), so
+// a real user's app always uses the production endpoint.
+export function isDebugBackend() {
+  return localStorage.getItem(DEBUG_BACKEND_KEY) === 'true'
+}
+
+export function setDebugBackend(on) {
+  localStorage.setItem(DEBUG_BACKEND_KEY, on ? 'true' : 'false')
 }
 
 // crypto.randomUUID is unavailable in insecure contexts (plain-HTTP LAN

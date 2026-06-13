@@ -4,6 +4,10 @@
 // Leave empty until the Apps Script is deployed; entries queue in localStorage.
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo0QeIpnE-IAyyho2lxyZI0V27ABiLSTOeHMTL2ae2s8353c87WljYc97Yd6IBovPxyw/exec'
 
+// Separate "debug" backend (a throwaway Sheet) used by e2e tests and the Debug
+// tab's backend toggle, so testing never touches the real data.
+export const DEBUG_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwd9p1V7h3Rx4jVMC3hbYBlz0624zBDBzJI-pzz0smjwgkv9Jg_80b-OX-RTq4KmM1Sgw/exec'
+
 // Egg colors offered in the entry form.
 export const COLORS = [
   { id: 'brown', label: 'Brown', swatch: '#8b5a3c' },
