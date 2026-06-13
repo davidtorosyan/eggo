@@ -21,6 +21,22 @@ export function renderLog(view) {
 
   view.innerHTML = `
     <form id="egg-form" autocomplete="off">
+      <label class="field-label">Color</label>
+      <div class="color-row" role="radiogroup" aria-label="Egg color">
+        ${COLORS.map(
+          (c, i) => `
+          <label class="color-chip">
+            <input type="radio" name="color" value="${c.id}" ${i === 0 ? 'checked' : ''} />
+            <span class="chip-body" style="--swatch:${c.swatch}">
+              <span class="swatch"></span>${c.label}
+            </span>
+          </label>`,
+        ).join('')}
+      </div>
+
+      <div class="field-label">Chicken <span class="optional">(optional — tap again to clear)</span></div>
+      <div class="chicken-row" id="chicken-row"></div>
+
       <div class="field-label weight-head">
         <span>Weight <span class="optional">(optional)</span></span>
         <span class="weight-readout">
@@ -38,22 +54,6 @@ export function renderLog(view) {
           (o) => `<button type="button" class="key" data-ones="${o}">${o}</button>`,
         ).join('')}
       </div>
-
-      <label class="field-label">Color</label>
-      <div class="color-row" role="radiogroup" aria-label="Egg color">
-        ${COLORS.map(
-          (c, i) => `
-          <label class="color-chip">
-            <input type="radio" name="color" value="${c.id}" ${i === 0 ? 'checked' : ''} />
-            <span class="chip-body" style="--swatch:${c.swatch}">
-              <span class="swatch"></span>${c.label}
-            </span>
-          </label>`,
-        ).join('')}
-      </div>
-
-      <div class="field-label">Chicken <span class="optional">(optional — tap again to clear)</span></div>
-      <div class="chicken-row" id="chicken-row"></div>
 
       <button type="submit" id="save">Save egg</button>
     </form>
