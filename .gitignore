@@ -12,6 +12,10 @@ CLAUDE.local.md
 .env
 .env.local
 
+# clasp (Apps Script tooling) — credentials + account-specific project pointer
+.clasprc.json
+.clasp.json
+
 # Editor/OS noise
 .DS_Store
 Thumbs.db

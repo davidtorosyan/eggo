@@ -9,6 +9,7 @@
     "preview": "vite preview --host"
   },
   "devDependencies": {
+    "@google/clasp": "^3.3.0",
     "vite": "^6.0.0"
   },
   "dependencies": {

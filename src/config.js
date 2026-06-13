@@ -2,7 +2,7 @@
 
 // Google Apps Script web app endpoint (deployed from the Sheet's script editor).
 // Leave empty until the Apps Script is deployed; entries queue in localStorage.
-export const APPS_SCRIPT_URL = ''
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo0QeIpnE-IAyyho2lxyZI0V27ABiLSTOeHMTL2ae2s8353c87WljYc97Yd6IBovPxyw/exec'
 
 // Egg colors offered in the entry form.
 export const COLORS = [

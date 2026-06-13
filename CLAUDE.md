@@ -34,9 +34,10 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   dropped from prod). Seed/clear fake data, wipe all, and a **bulk import**
   textarea (see format below).
 
-Backend is **not wired up yet**: `APPS_SCRIPT_URL` in `config.js` is empty, so
-all entries live in localStorage and are marked `synced: false`. When the URL is
-set, `storage.trySync()` POSTs unsynced entries.
+Backend is **live**: `APPS_SCRIPT_URL` in `config.js` points at the deployed
+Apps Script web app, and `storage.trySync()` POSTs unsynced entries to it. New
+entries still queue in localStorage as `synced: false` first, then flip to
+`synced: true` once the POST succeeds (so offline saves aren't lost).
 
 ## Data model
 
@@ -68,10 +69,27 @@ Imported entries get noon + 1min/egg timestamps (notes have no times).
 - **Frontend:** static site, Vite + vanilla JS, hosted on **GitHub Pages**
   (deploy workflow in `.github/workflows/deploy.yml`).
 - **Storage:** a Google Sheet. The static site POSTs to a **Google Apps Script
-  web app** (`apps-script/Code.gs`) attached to the Sheet — the Sheets API can't
+  web app** (`apps-script/Code.js`) attached to the Sheet — the Sheets API can't
   take anonymous writes and OAuth can't be embedded in a public page. Reads can
-  be public-sheet or via the same script.
+  be public-sheet or via the same script. The script handles `doGet` (all rows),
+  `doPost` append, and `doPost` with `{action:'delete', timestamp}` (deletes
+  rows matching that ISO timestamp — used for admin cleanup of test rows).
 - Offline-friendly: entries queue locally and sync when the endpoint is reachable.
+
+### Managing the Apps Script (clasp)
+
+The bound script is managed with **clasp** (devDependency), so its source lives
+in `apps-script/Code.js` and can be deployed from the CLI — no manual paste.
+
+- `apps-script/.clasp.json` (gitignored — has the script ID) points clasp at the
+  project; auth lives in `~/.clasprc.json` (one-time `npx clasp login`).
+- Workflow, run from `apps-script/`: edit `Code.js` → `npx clasp push -f` →
+  `npx clasp deploy -i <deploymentId> -d "<desc>"`.
+- **Always redeploy into the existing deployment ID** (the one embedded in
+  `APPS_SCRIPT_URL` — list with `npx clasp list-deployments`, it's the `eggo`
+  one, not `@HEAD`). A bare `clasp deploy` mints a **new** URL and breaks the app.
+- `appsscript.json` is the pulled manifest (`ANYONE_ANONYMOUS` web app); don't
+  hand-edit unless changing deployment settings.
 
 ## Commands
 
@@ -116,9 +134,11 @@ Imported entries get noon + 1min/egg timestamps (notes have no times).
 
 Done: dev seed tools, today view + history, undo/delete, smart chicken picker,
 keyboard-free weight picker, stats + charts, click-to-filter, bulk import.
+Backend live: Sheet + Apps Script deployed, `APPS_SCRIPT_URL` set, sync verified
+E2E (append + delete), script now clasp-managed from `apps-script/`.
 
-Pending (later): **PWA / install-to-home-screen + offline**, then **go-live** —
-create the Google Sheet + deploy `apps-script/Code.gs`, set `APPS_SCRIPT_URL`,
-create the GitHub repo, enable Pages (source: GitHub Actions), test sync E2E.
+Pending: **PWA / install-to-home-screen + offline**; **deploy the frontend** —
+create the GitHub repo, enable Pages (source: GitHub Actions via the existing
+`deploy.yml`). Sync itself is done.
 
 Skipped: QR code on dev start, CSV export.
