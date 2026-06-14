@@ -12,6 +12,7 @@ app.innerHTML = `
       <h1>
         <span class="egg">🥚</span> Eggo
         <span id="debug-badge" class="debug-badge" hidden>DEBUG 🧪</span>
+        <span id="sync-meter" class="sync-meter" hidden></span>
         <span id="sync-status" class="sync-status" role="status" aria-live="polite"></span>
       </h1>
       <nav class="tabs">
@@ -62,8 +63,43 @@ let toastTimer
 // (set via the Debug tab). Never shows in prod — the flag can't be set there.
 const debugBadge = document.querySelector('#debug-badge')
 function updateDebugBadge() {
-  debugBadge.hidden = !isDebugBackend()
+  const on = isDebugBackend()
+  debugBadge.hidden = !on
+  if (!on) hideMeter() // leaving debug clears any lingering meter
 }
+
+// Live sync-duration meter (debug mode only): shows ↑/↓ with a ticking timer
+// while a push/pull runs, then the final duration. Visible on every screen.
+const syncMeter = document.querySelector('#sync-meter')
+let meterTick
+let meterHide
+function hideMeter() {
+  clearInterval(meterTick)
+  clearTimeout(meterHide)
+  syncMeter.hidden = true
+}
+window.addEventListener('eggo:sync', ({ detail }) => {
+  if (!isDebugBackend()) return
+  const arrow = detail.kind === 'pull' ? '↓' : '↑'
+  if (detail.phase === 'start') {
+    clearTimeout(meterHide)
+    clearInterval(meterTick)
+    const t0 = Date.now()
+    syncMeter.hidden = false
+    syncMeter.className = 'sync-meter active'
+    const render = () => {
+      syncMeter.textContent = `${arrow} ${((Date.now() - t0) / 1000).toFixed(1)}s`
+    }
+    render()
+    meterTick = setInterval(render, 80)
+  } else {
+    clearInterval(meterTick)
+    syncMeter.className = `sync-meter ${detail.ok ? 'done' : 'fail'}`
+    syncMeter.textContent = `${arrow} ${(detail.ms / 1000).toFixed(1)}s${detail.ok ? '' : ' ✗'}`
+    meterHide = setTimeout(hideMeter, 4000) // linger so the duration is readable
+  }
+})
+
 updateDebugBadge()
 window.addEventListener('eggo:backendchanged', updateDebugBadge)
 

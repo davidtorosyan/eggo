@@ -606,6 +606,28 @@ h1 {
   }
 }
 
+/* Live sync-duration meter by the logo (debug mode only). Tabular digits keep
+   the ticking timer from jittering. */
+.sync-meter {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  vertical-align: middle;
+  color: var(--ink-soft);
+}
+.sync-meter.active {
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 16%, white);
+}
+.sync-meter.fail {
+  color: var(--danger);
+}
+.sync-meter[hidden] {
+  display: none;
+}
+
 /* "DEBUG" badge by the logo when sync targets the debug backend. */
 .debug-badge {
   font-size: 0.62rem;

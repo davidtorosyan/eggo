@@ -38,7 +38,9 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   Drop 1 on backend, Mark unsynced, Clear backend — is shown **only in debug mode**
   so test-data/destructive ops can't hit production. Seeding pushes to the (debug)
   backend in one batch. When debug mode is on, a **DEBUG badge** shows by the logo
-  (in `main.js`, persists across tabs).
+  (in `main.js`, persists across tabs), plus a **live sync-duration meter** (↑ push
+  / ↓ pull with a ticking timer) driven by `eggo:sync` events from `sync.js` —
+  visible on every screen so you can time sync events. Debug mode only.
 
 Backend sync is **live and two-way** (`src/sync.js`). The flow is local-first and
 quiet (see Architecture → Sync below): saving writes localStorage and returns

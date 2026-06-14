@@ -22,6 +22,14 @@ function endpoint() {
     : APPS_SCRIPT_URL
 }
 
+// Broadcast sync activity so the UI can show it live (the debug duration meter).
+// kind: 'push' | 'pull'; phase: 'start' | 'end' (end carries ok + ms).
+function emit(detail) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('eggo:sync', { detail }))
+  }
+}
+
 // --- Pure core (no I/O): merge local + remote into the new local state, and
 // prune tombstones (pendingDeletes) already gone from the backend.
 // Returns { entries, pendingDeletes, added, removed } where added/removed count
@@ -118,18 +126,24 @@ export function flush() {
 async function doFlush() {
   const entries = getEntries()
   const unsynced = entries.filter((e) => !e.synced)
+  const pending = getPendingDeletes()
+  if (!unsynced.length && !pending.length) return true // nothing to push
+
+  const t0 = Date.now()
+  emit({ kind: 'push', phase: 'start' })
+  let ok = true
+
   if (unsynced.length) {
     try {
       await batchUpsert(unsynced)
       for (const e of unsynced) e.synced = true
       setEntries(entries)
     } catch {
-      return false // network down — leave it all for a later retry
+      ok = false // network down — leave it all for a later retry
     }
   }
 
-  const pending = getPendingDeletes()
-  if (pending.length) {
+  if (ok && pending.length) {
     const remaining = []
     for (const id of pending) {
       try {
@@ -139,9 +153,11 @@ async function doFlush() {
       }
     }
     setPendingDeletes(remaining)
-    if (remaining.length) return false
+    if (remaining.length) ok = false
   }
-  return true
+
+  emit({ kind: 'push', phase: 'end', ok, ms: Date.now() - t0 })
+  return ok
 }
 
 // --- pull: fetch the backend, reconcile into local, then flush local changes.
@@ -158,10 +174,13 @@ export function pull() {
 }
 
 async function doPull() {
+  const t0 = Date.now()
+  emit({ kind: 'pull', phase: 'start' })
   let remote
   try {
     remote = await fetchRemote()
   } catch {
+    emit({ kind: 'pull', phase: 'end', ok: false, ms: Date.now() - t0 })
     return { added: 0, removed: 0, ok: false }
   }
   const { entries, pendingDeletes, added, removed } = reconcile(
@@ -172,7 +191,8 @@ async function doPull() {
   setEntries(entries)
   setPendingDeletes(pendingDeletes)
   setLastPull(new Date().toISOString())
-  await flush() // push anything still local-only + drain deletes
+  emit({ kind: 'pull', phase: 'end', ok: true, ms: Date.now() - t0 })
+  await flush() // push anything still local-only + drain deletes (emits its own)
   return { added, removed, ok: true }
 }
 
