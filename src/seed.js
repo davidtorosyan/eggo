@@ -41,6 +41,25 @@ export function clearAll() {
   setEntries([])
 }
 
+// Build `count` fake entries (NOT stored locally) — for bulk backend stress
+// tests. Timestamps are spread randomly over ~2 years so charts aren't one spike.
+export function makeFake(count) {
+  const out = []
+  const now = Date.now()
+  const TWO_YEARS = 730 * 86400000
+  for (let i = 0; i < count; i++) {
+    const chicken = CHICKENS[randInt(0, CHICKENS.length - 1)]
+    out.push({
+      id: uid(),
+      timestamp: new Date(now - randInt(0, TWO_YEARS)).toISOString(),
+      weight: Math.random() < 0.1 ? null : Math.round(clamp(48 + gauss() * 5, 35, 70) * 10) / 10,
+      color: chicken.color,
+      chicken: Math.random() < 0.7 ? chicken.name : null,
+    })
+  }
+  return out
+}
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }

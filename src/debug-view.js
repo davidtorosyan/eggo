@@ -3,7 +3,7 @@
 // (loaded via a dynamic import guarded by import.meta.env.DEV in main.js).
 // The test-data + divergence tools are gated to debug-backend mode so they can't
 // touch production by accident.
-import { seed, clearAll } from './seed.js'
+import { seed, clearAll, makeFake } from './seed.js'
 import {
   getEntries,
   setEntries,
@@ -21,6 +21,7 @@ import {
   clearRemote,
   upsertRemote,
   deleteRemoteById,
+  appendRemote,
 } from './sync.js'
 import { parseImport } from './import.js'
 import { CHICKENS } from './config.js'
@@ -65,6 +66,7 @@ export function renderDebug(view) {
     <div class="field-label">Debug tools <span class="optional">(debug backend)</span></div>
     <div class="debug-actions">
       <button type="button" class="debug-btn wide" id="d-seed">Seed 21 days</button>
+      <button type="button" class="debug-btn wide" id="d-bulk">+5000 rows to backend</button>
       <button type="button" class="debug-btn" id="d-clear-local">Clear local</button>
       <button type="button" class="debug-btn" id="d-phantom">Phantom row</button>
       <button type="button" class="debug-btn" id="d-del-backend">Drop 1 on backend</button>
@@ -162,6 +164,20 @@ export function renderDebug(view) {
       note.textContent = `Seeded ${n} — pushing to debug…`
       await flush()
       rerender(`Seeded ${n} eggs, synced to the debug backend.`)
+    })
+    on('#d-bulk', async () => {
+      const N = 5000
+      const CHUNK = 1000
+      const made = makeFake(N)
+      try {
+        for (let i = 0; i < made.length; i += CHUNK) {
+          note.textContent = `Adding to backend… ${i}/${N}`
+          await appendRemote(made.slice(i, i + CHUNK))
+        }
+        rerender(`Added ${N} rows to the debug backend. Pull to load them.`)
+      } catch {
+        rerender('Bulk add failed (offline?).')
+      }
     })
     on('#d-clear-local', () => {
       setEntries([])

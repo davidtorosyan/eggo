@@ -90,7 +90,8 @@ const strip = (e) => ({
 })
 
 // Brand-new entries: append without an id-scan — O(1) regardless of sheet size.
-function appendRemote(entries) {
+// Exported so the Debug tab can bulk-load the backend.
+export function appendRemote(entries) {
   return post({ action: 'append', entries: entries.map(strip) })
 }
 
