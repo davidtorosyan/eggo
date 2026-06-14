@@ -558,12 +558,68 @@ h1 {
   border-color: color-mix(in srgb, var(--danger) 30%, var(--line));
 }
 
-/* Backend toggle doubles as the active-backend indicator: amber when on the
-   throwaway debug Sheet so you can't forget you're off production. */
-.debug-btn.backend-toggle.on-debug {
+/* Backend switch: PROD ⟷ DEBUG. Track goes amber + knob slides right on debug. */
+.backend-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.bs-opt {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+.bs-opt.active {
+  color: var(--ink);
+}
+.bs-track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.2s;
+}
+.bs-track.on {
+  background: var(--accent);
+}
+.bs-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(61 50 41 / 0.3);
+  transition: transform 0.2s;
+}
+.bs-track.on .bs-knob {
+  transform: translateX(20px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bs-knob {
+    transition: none;
+  }
+}
+
+/* "DEBUG" badge by the logo when sync targets the debug backend. */
+.debug-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--accent-deep);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, white);
+  background: color-mix(in srgb, var(--accent) 18%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, white);
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.debug-badge[hidden] {
+  display: none;
 }
 
 .debug-btn.danger.arm {

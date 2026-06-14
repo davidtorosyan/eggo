@@ -1,7 +1,7 @@
 import './style.css'
 import { renderLog } from './log-view.js'
 import { renderStats } from './stats-view.js'
-import { getEntries } from './storage.js'
+import { getEntries, isDebugBackend } from './storage.js'
 import { pull } from './sync.js'
 
 const app = document.querySelector('#app')
@@ -11,6 +11,7 @@ app.innerHTML = `
     <header class="top">
       <h1>
         <span class="egg">🥚</span> Eggo
+        <span id="debug-badge" class="debug-badge" hidden>DEBUG 🧪</span>
         <span id="sync-status" class="sync-status" role="status" aria-live="polite"></span>
       </h1>
       <nav class="tabs">
@@ -56,6 +57,15 @@ show(requested)
 const syncEl = document.querySelector('#sync-status')
 const toastEl = document.querySelector('#toast')
 let toastTimer
+
+// Persistent "DEBUG" badge by the logo whenever sync targets the debug backend
+// (set via the Debug tab). Never shows in prod — the flag can't be set there.
+const debugBadge = document.querySelector('#debug-badge')
+function updateDebugBadge() {
+  debugBadge.hidden = !isDebugBackend()
+}
+updateDebugBadge()
+window.addEventListener('eggo:backendchanged', updateDebugBadge)
 
 function setSync(state) {
   syncEl.className = `sync-status ${state}`

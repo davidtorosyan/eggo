@@ -45,10 +45,12 @@ export function renderDebug(view) {
     </div>
 
     <div class="field-label">Backend</div>
-    <div class="debug-actions">
-      <button type="button" class="debug-btn wide backend-toggle ${debug ? 'on-debug' : ''}"
-        id="d-toggle-backend">${debug ? 'DEBUG 🧪' : 'PROD'} — tap to use ${debug ? 'PROD' : 'DEBUG 🧪'}</button>
-    </div>
+    <label class="backend-switch">
+      <span class="bs-opt ${debug ? '' : 'active'}">PROD</span>
+      <span class="bs-track ${debug ? 'on' : ''}"><span class="bs-knob"></span></span>
+      <span class="bs-opt ${debug ? 'active' : ''}">DEBUG 🧪</span>
+      <input type="checkbox" id="d-toggle-backend" ${debug ? 'checked' : ''} hidden />
+    </label>
 
     <div class="field-label">Sync</div>
     <div class="debug-actions">
@@ -98,11 +100,12 @@ export function renderDebug(view) {
 
   // --- Backend toggle: switch endpoint, then reload local from it so you see a
   // clean view of the selected backend (clears local — fine for a dev tool). ---
-  on('#d-toggle-backend', async () => {
+  view.querySelector('#d-toggle-backend').addEventListener('change', async () => {
     const toDebug = !isDebugBackend()
     setDebugBackend(toDebug)
     setEntries([])
     setPendingDeletes([])
+    window.dispatchEvent(new Event('eggo:backendchanged')) // update the header badge
     note.textContent = `Switching to ${toDebug ? 'DEBUG' : 'PROD'}…`
     await pull()
     rerender(
