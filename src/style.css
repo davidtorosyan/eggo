@@ -80,7 +80,7 @@ h1 {
   display: inline-block;
   width: 15px;
   height: 18px;
-  vertical-align: -3px;
+  vertical-align: middle;
   margin-right: 2px;
 }
 
@@ -93,7 +93,7 @@ h1 {
   justify-content: center;
   width: 18px;
   height: 22px;
-  vertical-align: -3px;
+  vertical-align: middle;
   margin-right: 2px;
 }
 .egg-cluster .swatch {

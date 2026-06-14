@@ -72,6 +72,7 @@ export function renderDebug(view) {
       <button type="button" class="debug-btn" id="d-del-backend">Drop 1 on backend</button>
       <button type="button" class="debug-btn" id="d-unsync">Mark unsynced</button>
       <button type="button" class="debug-btn danger wide" id="d-clear-backend">Clear backend rows</button>
+      <button type="button" class="debug-btn danger wide" id="d-nuke">Clear ALL (local + backend)</button>
     </div>`
         : ''
     }
@@ -228,6 +229,19 @@ export function renderDebug(view) {
           rerender('Backend rows cleared.')
         } catch {
           rerender('Clear failed (offline?).')
+        }
+      })
+    })
+    on('#d-nuke', (e) => {
+      armOr(e.currentTarget, 'Tap again to clear EVERYTHING', 'Clear ALL (local + backend)', async () => {
+        note.textContent = 'Clearing everything…'
+        try {
+          await clearRemote() // backend first; only wipe local if it succeeds
+          clearAll()
+          setPendingDeletes([])
+          rerender('Cleared all local + backend data.')
+        } catch {
+          rerender('Clear failed (offline?). Nothing changed.')
         }
       })
     })

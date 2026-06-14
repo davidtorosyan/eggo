@@ -43,7 +43,8 @@ three follow.
   debug Sheet, clears local, reloads); always-on **Sync** (Pull, Push), **Import**,
   **Wipe local**. A **Debug tools** section — Seed, **+5000 rows to backend**
   (bulk stress test, backend-only), Clear local, Phantom row, Drop 1 on backend,
-  Mark unsynced, Clear backend — is shown **only in debug mode**
+  Mark unsynced, Clear backend, Clear ALL (local + backend) — is shown **only in
+  debug mode**
   so test-data/destructive ops can't hit production. Seeding pushes to the (debug)
   backend in one batch. When debug mode is on, a **DEBUG badge** shows by the logo
   (in `main.js`, persists across tabs), plus a **live sync-duration meter** (↑ push
