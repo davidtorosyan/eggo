@@ -6,7 +6,7 @@ import {
   WEIGHT_MAX,
 } from './config.js'
 import { saveEgg, deleteEgg, getEntries } from './storage.js'
-import { eggSvg } from './egg-icon.js'
+import { eggSpan } from './egg-icon.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -197,7 +197,7 @@ export function renderLog(view, signal) {
     const eggs = todayEntries
       .slice(0, 8)
       .reverse()
-      .map((e) => eggSvg(swatchFor(e.color)))
+      .map((e) => eggSpan(swatchFor(e.color)))
       .join('')
     todayLine.innerHTML =
       todayCount === 0 ? 'No eggs yet today' : `${eggs} ${todayCount} today`

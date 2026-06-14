@@ -27,8 +27,10 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   list (color dot, weight or "—", chicken, time). Two-tap delete per row ("× →
   Sure?"). Undo after save.
 
-The header logo is three eggs — brown/blue/olive — built from a shared egg-shape
-SVG (`egg-icon.js`, reused by the today-count row).
+The header logo is three eggs — brown/blue/olive — and the today-count eggs both
+reuse the color-selector's `.swatch` egg shape (via `egg-icon.js`), so there's a
+single egg shape across the whole page. Change `.swatch`'s border-radius and all
+three follow.
 - **Stats** (`stats-view.js`): summary tiles (total / last 7 days / avg weight),
   and Chart.js charts — eggs/day (14d), cumulative total, avg weight trend,
   color doughnut, by-chicken bar. **Tap a color slice or hen bar to filter** the
