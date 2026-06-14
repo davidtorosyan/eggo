@@ -24,8 +24,8 @@ export function seed(days = 21) {
         weight: Math.random() < 0.1 ? null : Math.round(weight * 10) / 10,
         color: chicken.color,
         chicken: Math.random() < 0.7 ? chicken.name : null,
-        synced: true, // never try to upload fake data
-        seeded: true,
+        synced: false, // pushed to the (debug) backend on the next flush
+        seeded: true, // marker only — for the tile count; seeding is debug-only
       })
     }
   }
@@ -35,13 +35,6 @@ export function seed(days = 21) {
     ),
   )
   return fresh.length
-}
-
-// Removes only seeded entries; returns how many real entries remain.
-export function clearSeed() {
-  const kept = getEntries().filter((e) => !e.seeded)
-  setEntries(kept)
-  return kept.length
 }
 
 export function clearAll() {

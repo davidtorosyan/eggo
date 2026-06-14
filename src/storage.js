@@ -79,7 +79,7 @@ export function deleteEgg(id) {
   const entries = getEntries()
   const entry = entries.find((e) => e.id === id)
   setEntries(entries.filter((e) => e.id !== id))
-  if (entry && entry.synced && !entry.seeded) {
+  if (entry && entry.synced) {
     const pending = getPendingDeletes()
     if (!pending.includes(id)) setPendingDeletes([...pending, id])
   }

@@ -32,11 +32,13 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
   Hen axis labels have an egg-color dot (custom canvas plugin `henDots`).
 - **Debug** (`debug-view.js`): **dev builds only** (gated by `import.meta.env.DEV`,
   dropped from prod). Tiles (entries / unsynced / pending-del / backend count /
-  seeded / last-pull); a **Backend toggle** (prod ↔ throwaway debug Sheet —
-  clears local and reloads from the selected one); **Sync** (Pull, Push, Clear
-  backend); **Simulate divergence** (clear-local-only, add phantom backend row,
-  delete one backend row only, mark all unsynced) for testing reconciliation by
-  hand; seed/clear fake data, wipe all, and a **bulk import** textarea (below).
+  seeded / last-pull); a **Backend toggle** (a switch — flips to the throwaway
+  debug Sheet, clears local, reloads); always-on **Sync** (Pull, Push), **Import**,
+  **Wipe local**. A **Debug tools** section — Seed, Clear local, Phantom row,
+  Drop 1 on backend, Mark unsynced, Clear backend — is shown **only in debug mode**
+  so test-data/destructive ops can't hit production. Seeding pushes to the (debug)
+  backend in one batch. When debug mode is on, a **DEBUG badge** shows by the logo
+  (in `main.js`, persists across tabs).
 
 Backend sync is **live and two-way** (`src/sync.js`). The flow is local-first and
 quiet (see Architecture → Sync below): saving writes localStorage and returns
@@ -54,8 +56,9 @@ Entry (localStorage key `eggo-entries`, array):
 - `weight` and `chicken` are both nullable; stats/avg/weight-chart skip nulls.
 - `uid()` in `storage.js` is used for ids (NOT `crypto.randomUUID` — see below).
   The `id` is the cross-device identity key and is persisted to the Sheet.
-- `synced: false` = a local add not yet on the backend. `seeded` entries are
-  dev-only local fake data — never pushed, never pruned by a pull.
+- `synced: false` = a local add not yet on the backend. `seeded` is just a marker
+  (for the Debug tile count); seeded entries sync like any other. Seeding is only
+  available in debug-backend mode, so fake data only ever lands on the debug Sheet.
 - More localStorage keys: `eggo-pending-deletes` (ids of synced entries deleted
   locally, awaiting a backend delete — a tombstone queue), `eggo-last-pull` (ISO
   time of the last successful pull), and `eggo-debug-backend` (`'true'` routes

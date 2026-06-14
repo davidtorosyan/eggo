@@ -38,11 +38,39 @@ function doPost(e) {
   if (action === 'delete') return json({ ok: true, deleted: deleteById_(body.id) });
   if (action === 'clear') return json({ ok: true, cleared: clearAll_() });
   if (action === 'batch') {
-    for (var i = 0; i < body.entries.length; i++) upsert_(body.entries[i]);
-    return json({ ok: true, upserted: body.entries.length });
+    return json({ ok: true, upserted: batchUpsert_(body.entries) });
   }
   upsert_(body); // default: upsert a single entry
   return json({ ok: true });
+}
+
+// Bulk upsert: read the id column once, update existing rows in place, and append
+// all new rows in a single setValues — O(n) sheet ops, not O(n^2). Keeps seeding
+// large data fast.
+function batchUpsert_(items) {
+  var sheet = sheet_();
+  ensureHeader_(sheet);
+  var last = sheet.getLastRow();
+  var idToRow = {};
+  if (last >= 2) {
+    var ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < ids.length; i++) idToRow[String(ids[i][0])] = i + 2;
+  }
+  var append = [];
+  for (var j = 0; j < items.length; j++) {
+    var e = items[j];
+    var row = [e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || ''];
+    var existing = idToRow[String(e.id)];
+    if (existing) {
+      sheet.getRange(existing, 1, 1, row.length).setValues([row]);
+    } else {
+      append.push(row);
+    }
+  }
+  if (append.length) {
+    sheet.getRange(last + 1, 1, append.length, append[0].length).setValues(append);
+  }
+  return items.length;
 }
 
 // 1-based sheet row for the given id, or 0 if not present.

@@ -34,10 +34,6 @@ export function reconcile(local, remote, pendingDeletes = []) {
   let removed = 0
 
   for (const e of local) {
-    if (e.seeded) {
-      entries.push(e) // dev-only local data, never synced or pruned
-      continue
-    }
     if (pending.has(e.id)) continue // tombstoned; awaiting remote delete
     const inRemote = remoteIds.has(e.id)
     if (e.synced) {
@@ -77,14 +73,17 @@ async function post(body) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
-function pushEntry(e) {
-  return post({
-    id: e.id,
-    timestamp: e.timestamp,
-    weight: e.weight ?? null,
-    color: e.color,
-    chicken: e.chicken ?? null,
-  })
+const strip = (e) => ({
+  id: e.id,
+  timestamp: e.timestamp,
+  weight: e.weight ?? null,
+  color: e.color,
+  chicken: e.chicken ?? null,
+})
+
+// One request for all unsynced entries — fast even for a 100+ row seed.
+function batchUpsert(entries) {
+  return post({ action: 'batch', entries: entries.map(strip) })
 }
 
 function deleteRemote(id) {
@@ -118,19 +117,16 @@ export function flush() {
 
 async function doFlush() {
   const entries = getEntries()
-  let changed = false
-  for (const e of entries) {
-    if (e.synced || e.seeded) continue
+  const unsynced = entries.filter((e) => !e.synced)
+  if (unsynced.length) {
     try {
-      await pushEntry(e)
-      e.synced = true
-      changed = true
+      await batchUpsert(unsynced)
+      for (const e of unsynced) e.synced = true
+      setEntries(entries)
     } catch {
-      if (changed) setEntries(entries)
-      return false // network down — leave the rest for a later retry
+      return false // network down — leave it all for a later retry
     }
   }
-  if (changed) setEntries(entries)
 
   const pending = getPendingDeletes()
   if (pending.length) {
