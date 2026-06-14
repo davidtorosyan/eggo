@@ -187,6 +187,9 @@ the anonymous-execution consent).
 
 ## Verifying changes
 
+- **Pushing to `main` auto-deploys to the live public site** (`deploy.yml`). Gate
+  it: `npm test` (+ `npm run test:e2e` for sync changes) and the ui-review skill
+  before pushing. Commit/push only when the user asks.
 - After any UI change (styles, layout, markup, charts), run the **ui-review**
   skill (`.claude/skills/ui-review`) before committing — screenshot-driven
   regression review across states and viewports.
@@ -213,19 +216,62 @@ the anonymous-execution consent).
 ## Roadmap
 
 Done: dev seed tools, today view + history, undo/delete, smart chicken picker,
-keyboard-free weight picker, stats + charts, click-to-filter, bulk import.
-Backend live + clasp-managed from `apps-script/`. **Two-way background sync** done:
-instant local save, load-from-backend on new devices, id-keyed reconcile with
-deletes propagating (backend = shared truth), sync indicator + toast, debug
+keyboard-free weight picker, stats + charts, click-to-filter, bulk import (Debug
+tab + a Log-tab import panel). Backend live + clasp-managed from `apps-script/`.
+**Two-way background sync** done: instant local save (O(1) append fast path),
+load-from-backend on new devices, id-keyed reconcile with deletes propagating
+(backend = shared truth), sync indicator + toast, **pull-to-refresh**, debug
 divergence tools, unit + live-Sheet e2e tests. **Shipped:** public repo
 `davidtorosyan/eggo`, deployed to GitHub Pages via `deploy.yml` — live at
-https://www.davidtorosyan.com/eggo/ (custom domain; relative `base` handles the
-`/eggo/` subpath).
+https://www.davidtorosyan.com/eggo/ (custom domain; vite `base: '/eggo/'`).
+**PWA done:** installable (manifest + icons) + offline (Workbox SW) via
+`vite-plugin-pwa`.
 
-**PWA done:** installable (manifest + icons) and offline (Workbox SW precaches
-the shell, auto-update) via `vite-plugin-pwa`. Nothing major pending.
+### Next: cross-device push notifications (planned, NOT started)
 
-Later (not yet needed): a **dedicated test Sheet + second deployment** so
-`test:e2e` stops clobbering real data once eggs accumulate.
+Goal: when an egg is logged on one device, **notify the other devices** ("a new
+egg was logged"). Leaning toward **OneSignal** (managed push).
+
+- **Why a service is needed:** the Sheet + Apps Script backend can't *send* Web
+  Push itself — VAPID needs ES256/ECDSA signing + RFC 8291 payload encryption,
+  which Apps Script's crypto utilities don't support. So a sender is required.
+- **Chosen direction — OneSignal (Path A):** it handles VAPID/encryption/iOS
+  delivery; triggering a send is just an authenticated HTTPS POST, which Apps
+  Script *can* do. Flow: `doPost` (already sees every new row) → `UrlFetchApp`
+  POST to OneSignal's REST API → OneSignal pushes the other devices. (Alt
+  considered — Path B: a self-hosted Cloudflare Worker holding VAPID keys; no
+  third party, more to build.)
+- **Secrets (this repo is public!):** OneSignal **REST API key** lives in Apps
+  Script **Script Properties**, never committed. The OneSignal **App ID** is
+  public (client-side, fine). No secrets in the repo.
+- **Moving parts to build:**
+  - An opt-in **"Enable notifications"** control — iOS requires a *user tap* to
+    prompt, and push only works on the **installed** PWA.
+  - A **`push` + `notificationclick` handler in the service worker** → switch
+    `vite-plugin-pwa` from `generateSW` to **`injectManifest`** (write our own SW:
+    keep `precacheAndRoute(self.__WB_MANIFEST)`, add the handlers, import
+    OneSignal's worker via `importScripts`). Watch for SW scope conflicts.
+  - **Trigger scoping / edge cases:** notify only on *real-time* adds. A device
+    coming online with a backlog of unsynced eggs (or a bulk import) would else
+    fire "50 eggs added" — ignore backlog/imports, debounce, and exclude the
+    sender. Wire on **prod only** (the debug backend's `doPost` must not notify).
+  - Subscriptions are managed by OneSignal (no Sheet tab needed).
+- **iOS caveats:** installed PWA + iOS 16.4+ (user's iPhone is fine); delivery is
+  best-effort (can be delayed/coalesced; Apple may drop subscriptions).
+- Worth weighing the effort vs payoff for a ~2-device household before building.
+
+### Known considerations / follow-ups (none blocking)
+
+- **Public anonymous-write exposure:** `config.js` ships the live `/exec` URLs and
+  `doPost` accepts anonymous `append`/`delete`/`clear` — anyone with the URL could
+  write to or wipe the prod Sheet. Fine for a backyard tracker; if it matters, add
+  a **shared-secret token** the client sends and the script checks (token in
+  Script Properties + a build-time client env, kept out of committed source).
+- **`deploy.yml` runs Node-20 actions**, which GitHub is deprecating (forces Node
+  24 from 2026-06-16). Bump `actions/*` versions when convenient.
+- **Dedicated test Sheet + second deployment** so `test:e2e` stops clobbering real
+  data once real eggs accumulate (today it targets the throwaway debug Sheet).
+- Deferred: a shared **`test/browser/` launcher** so ui-review + DOM checks reuse
+  one puppeteer harness instead of ad-hoc temp-dir scripts ("maybe later").
 
 Skipped: QR code on dev start, CSV export.
