@@ -57,7 +57,9 @@ test('sync engine round-trips against the live Sheet', async (t) => {
   })
 
   await t.test('flush is idempotent — re-pushing makes no duplicates', async () => {
-    setEntries(getEntries().map((e) => ({ ...e, synced: false })))
+    // attempted:true => these go via the upsert path (already on the backend),
+    // mirroring the debug "Mark unsynced" tool.
+    setEntries(getEntries().map((e) => ({ ...e, synced: false, attempted: true })))
     await flush()
     assert.equal((await backendRows()).length, 2)
   })

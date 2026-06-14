@@ -199,7 +199,9 @@ export function renderDebug(view) {
       }
     })
     on('#d-unsync', () => {
-      setEntries(getEntries().map((e) => ({ ...e, synced: false })))
+      // attempted:true so the re-push upserts (these rows already exist on the
+      // backend) instead of appending duplicates.
+      setEntries(getEntries().map((e) => ({ ...e, synced: false, attempted: true })))
       rerender('Marked all local entries unsynced. Push to re-upload.')
     })
     on('#d-clear-backend', (e) => {

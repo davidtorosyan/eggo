@@ -37,11 +37,30 @@ function doPost(e) {
   var action = body.action || 'upsert';
   if (action === 'delete') return json({ ok: true, deleted: deleteById_(body.id) });
   if (action === 'clear') return json({ ok: true, cleared: clearAll_() });
+  if (action === 'append') {
+    return json({ ok: true, appended: appendRows_(body.entries) });
+  }
   if (action === 'batch') {
     return json({ ok: true, upserted: batchUpsert_(body.entries) });
   }
   upsert_(body); // default: upsert a single entry
   return json({ ok: true });
+}
+
+// Append new rows without scanning the sheet — O(rows), not O(total). The client
+// only sends entries here that have never been sent, so there's nothing to dedupe
+// (retries fall back to the upsert batch path, which is idempotent).
+function appendRows_(items) {
+  if (!items.length) return 0;
+  var sheet = sheet_();
+  ensureHeader_(sheet);
+  var rows = [];
+  for (var i = 0; i < items.length; i++) {
+    var e = items[i];
+    rows.push([e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || '']);
+  }
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+  return rows.length;
 }
 
 // Bulk upsert: read the id column once, update existing rows in place, and append

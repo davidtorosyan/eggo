@@ -89,7 +89,12 @@ const strip = (e) => ({
   chicken: e.chicken ?? null,
 })
 
-// One request for all unsynced entries — fast even for a 100+ row seed.
+// Brand-new entries: append without an id-scan — O(1) regardless of sheet size.
+function appendRemote(entries) {
+  return post({ action: 'append', entries: entries.map(strip) })
+}
+
+// Re-sent entries (a retry, or a debug re-sync): upsert by id so it's idempotent.
 function batchUpsert(entries) {
   return post({ action: 'batch', entries: entries.map(strip) })
 }
@@ -134,12 +139,20 @@ async function doFlush() {
   let ok = true
 
   if (unsynced.length) {
+    // Fresh entries (never sent) append in O(1); anything sent before — or a
+    // retry, or a debug re-sync — upserts so it can't duplicate.
+    const fresh = unsynced.filter((e) => !e.attempted)
+    const resend = unsynced.filter((e) => e.attempted)
+    for (const e of unsynced) e.attempted = true
+    setEntries(entries) // persist intent before the network: a lost response
+    // turns these into `attempted` resends next time, never duplicate appends.
     try {
-      await batchUpsert(unsynced)
+      if (fresh.length) await appendRemote(fresh)
+      if (resend.length) await batchUpsert(resend)
       for (const e of unsynced) e.synced = true
       setEntries(entries)
     } catch {
-      ok = false // network down — leave it all for a later retry
+      ok = false // network down — `attempted` stays set, so the retry upserts
     }
   }
 

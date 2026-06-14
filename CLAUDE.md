@@ -61,6 +61,9 @@ Entry (localStorage key `eggo-entries`, array):
 - `synced: false` = a local add not yet on the backend. `seeded` is just a marker
   (for the Debug tile count); seeded entries sync like any other. Seeding is only
   available in debug-backend mode, so fake data only ever lands on the debug Sheet.
+- `attempted: true` = this entry has been sent (or re-marked unsynced), so a
+  re-push must **upsert** (idempotent), not append. Absent on brand-new saves,
+  which take the O(1) append fast path. See Sync below.
 - More localStorage keys: `eggo-pending-deletes` (ids of synced entries deleted
   locally, awaiting a backend delete — a tombstone queue), `eggo-last-pull` (ISO
   time of the last successful pull), and `eggo-debug-backend` (`'true'` routes
@@ -90,8 +93,9 @@ Imported entries get noon + 1min/egg timestamps (notes have no times).
   web app** (`apps-script/Code.js`) attached to the Sheet — the Sheets API can't
   take anonymous writes and OAuth can't be embedded in a public page. Reads can
   be public-sheet or via the same script. The script handles `doGet` (all rows as
-  objects), `doPost` upsert-by-id (idempotent — retries never duplicate),
-  `{action:'delete', id}`, and `{action:'clear'}` (+ optional `batch`).
+  objects), `doPost` `append` (new rows, no id-scan — O(1) regardless of sheet
+  size), `batch` upsert-by-id (idempotent — for resends/retries), single
+  upsert-by-id, `{action:'delete', id}`, and `{action:'clear'}`.
 - Offline-friendly: entries queue locally and sync when the endpoint is reachable.
 
 ### Sync (`src/sync.js`)
@@ -101,9 +105,11 @@ the network and the merge.
 
 - **Save is instant:** `saveEgg`/`deleteEgg` write localStorage and fire
   `flush()` without awaiting — the Save button never blocks on the network.
-- **`flush()`** pushes every `synced:false` entry (idempotent upsert), then drains
-  the `pending-deletes` tombstones; serialized so overlapping triggers can't
-  double-run. **`pull()`** GETs all rows, runs the pure **`reconcile()`**, persists,
+- **`flush()`** pushes every `synced:false` entry — brand-new ones via the O(1)
+  `append` path, anything `attempted` (a retry or debug re-sync) via idempotent
+  upsert — then drains the `pending-deletes` tombstones; serialized so overlapping
+  triggers can't double-run. It marks entries `attempted` (and persists) *before*
+  the network call, so a lost response can't cause a duplicate append on retry. **`pull()`** GETs all rows, runs the pure **`reconcile()`**, persists,
   then flushes. Triggers: app load, `online`, and `visibilitychange`.
 - **`reconcile(local, remote, pendingDeletes)`** is the pure, unit-tested core.
   **Backend is the shared source of truth:** a previously-synced entry missing
