@@ -18,7 +18,7 @@ export function eggLogo() {
 export function eggCluster() {
   return (
     '<span class="egg-cluster" role="img" aria-label="many eggs">' +
-    COLORS.map((c, i) => `<span class="swatch c${i}" style="--swatch:${c.swatch}"></span>`).join('') +
+    COLORS.map((c) => `<span class="swatch" style="--swatch:${c.swatch}"></span>`).join('') +
     '</span>'
   )
 }

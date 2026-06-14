@@ -84,33 +84,25 @@ h1 {
   margin-right: 2px;
 }
 
-/* "Many eggs" cluster: three small eggs in one egg's footprint (the today eggs
-   render at .swatch's 18x22), so swapping it in for the first egg never shifts
-   the line width. */
+/* "Many eggs" cluster: the 3-egg logo shrunk + centered into one egg's footprint
+   (today eggs render at .swatch's 18x22), so swapping it in for the first egg
+   never shifts the line width. Same flex+overlap technique as the logo. */
 .egg-cluster {
-  position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 22px;
   vertical-align: -3px;
   margin-right: 2px;
 }
 .egg-cluster .swatch {
-  position: absolute;
-  width: 11px;
-  height: 13px;
+  flex: none;
+  width: 8px;
+  height: 10px;
 }
-.egg-cluster .c0 {
-  left: 0;
-  top: 9px;
-}
-.egg-cluster .c1 {
-  right: 0;
-  top: 9px;
-}
-.egg-cluster .c2 {
-  left: 3.5px;
-  top: 0;
+.egg-cluster .swatch:not(:first-child) {
+  margin-left: -3px;
 }
 
 .tabs {
