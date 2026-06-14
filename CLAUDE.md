@@ -226,8 +226,47 @@ divergence tools, unit + live-Sheet e2e tests. **Shipped:** public repo
 https://www.davidtorosyan.com/eggo/ (custom domain; vite `base: '/eggo/'`).
 **PWA done:** installable (manifest + icons) + offline (Workbox SW) via
 `vite-plugin-pwa`.
+**Push notifications done:** logging an egg on one device notifies the others
+(OneSignal). See the shipped section below.
 
-### Next: cross-device push notifications (planned, NOT started)
+### Cross-device push notifications (SHIPPED 2026-06-14)
+
+Logging an egg on one device pushes the other devices ("🥚 A new … egg was
+logged"). Built on **OneSignal** (managed push). How it works:
+
+- **Client** (`src/push.js`): loads the OneSignal page SDK (reusing our SW), an
+  opt-in flow (`enableNotifications` — prompts, subscribes, tags the device
+  `device=<deviceId>`), and `notifyNewEgg(entry)` — a best-effort
+  `{action:'notify'}` POST fired **only from the live-save path** in `log-view.js`
+  (never imports/backlog/undo/sync). The opt-in UI is a section at the bottom of
+  the Log view; the **Enable** button shows on desktop/Android, while iOS shows an
+  "add to home screen first" hint (`needsInstall`).
+- **Service worker** (`src/sw.js`): `vite-plugin-pwa` runs in **`injectManifest`**
+  mode building a **classic/iife** SW (`injectManifest.rollupFormat: 'iife'`, so
+  `importScripts` works) that pulls in OneSignal's worker for push/display +
+  Workbox precaching — one SW, one scope.
+- **Backend** (`apps-script/Code.js` `notify_`): on `action:'notify'`, posts to
+  the OneSignal REST API, **targeting by the `device != sender` tag filter alone**
+  (not a segment — see gotcha) so it reaches all subscribers and excludes the
+  logging device. Gated on the `ONESIGNAL_API_KEY` + `ONESIGNAL_APP_ID` **Script
+  Properties** (prod only → the debug backend's `doPost` is a silent no-op).
+- **Secrets:** the OneSignal **App ID** is public (`config.js`). The **REST API
+  key** lives only in the prod Apps Script's Script Properties, never committed.
+
+**Two gotchas that bit during setup** (avoid re-discovering):
+- OneSignal's `"Subscribed Users"` segment resolves **empty** here (newer
+  subscription model), and mixing `included_segments` with `filters` fails the
+  whole send — hence filter-only targeting.
+- The web app needs the **`script.external_request`** OAuth scope for
+  `UrlFetchApp`. `authorize()` touches `UrlFetchApp` so a single Run ▸ authorize
+  grants it; a fresh script must Allow the "connect to an external service" prompt.
+
+Debugging tip: POST to the prod `/exec` with **Node `fetch`** (curl mishandles
+Apps Script's 302 POST redirect). `sent:1` = fired; `sent:0` = gate failed
+(missing props or `UrlFetchApp` threw). A dev-only "Send test push" lives on the
+Debug tab.
+
+#### Original plan / alternatives considered (kept for reference)
 
 Goal: when an egg is logged on one device, **notify the other devices** ("a new
 egg was logged"). Leaning toward **OneSignal** (managed push).
