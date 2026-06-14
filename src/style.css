@@ -31,6 +31,8 @@ body {
   color: var(--ink);
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  /* Custom pull-to-refresh handles the top overscroll; suppress the browser's. */
+  overscroll-behavior-y: contain;
 }
 
 .card {
@@ -378,6 +380,51 @@ h1 {
 }
 @media (prefers-reduced-motion: reduce) {
   .sync-status.syncing {
+    animation: none;
+  }
+}
+
+/* Pull-to-refresh badge (PWA has no native pull-to-refresh). JS slides + rotates
+   the badge as you drag; it spins while the sync runs. */
+.ptr {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+.ptr-badge {
+  margin-top: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 3px 10px rgb(61 50 41 / 0.25);
+  display: grid;
+  place-items: center;
+  color: var(--accent-deep);
+  font-size: 20px;
+  font-weight: 700;
+  transform: translateY(-52px);
+  opacity: 0;
+}
+.ptr.ready .ptr-badge {
+  color: var(--accent-deep);
+  box-shadow: 0 3px 12px rgb(217 142 50 / 0.45);
+}
+.ptr.refreshing .ptr-icon {
+  animation: ptr-spin 0.7s linear infinite;
+}
+@keyframes ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptr.refreshing .ptr-icon {
     animation: none;
   }
 }

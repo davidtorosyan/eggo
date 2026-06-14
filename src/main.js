@@ -23,6 +23,7 @@ app.innerHTML = `
     </header>
     <div id="view"></div>
   </main>
+  <div id="ptr" class="ptr"><div class="ptr-badge"><span class="ptr-icon">↻</span></div></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 `
 
@@ -128,19 +129,21 @@ function refreshAfterSync() {
   else views[current]?.(view, viewAbort?.signal)
 }
 
-async function runSync(initial = false) {
+async function runSync(initial = false, manual = false) {
   const fresh = initial && getEntries().length === 0
   setSync('syncing')
   if (fresh) toast('Loading your eggs…')
   const { added, removed, ok } = await pull()
   setSync(ok ? 'idle' : 'offline')
   if (!ok) {
-    if (fresh) toast('Offline — your eggs will load when reconnected')
+    if (manual) toast('Offline — no connection')
+    else if (fresh) toast('Offline — your eggs will load when reconnected')
     return
   }
   if (added || removed) refreshAfterSync()
   if (fresh) toast(`Loaded ${added} egg${added === 1 ? '' : 's'} from the cloud`)
   else if (added || removed) toast(syncSummary(added, removed))
+  else if (manual) toast('Up to date')
 }
 
 function syncSummary(added, removed) {
@@ -154,6 +157,68 @@ runSync(true)
 window.addEventListener('online', () => runSync())
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) runSync()
+})
+
+// --- Pull-to-refresh: a standalone PWA has no browser chrome / native
+// pull-to-refresh, so implement it. Drag down from the top past a threshold to
+// trigger a sync. ---
+const ptr = document.querySelector('#ptr')
+const ptrBadge = ptr.querySelector('.ptr-badge')
+const ptrIcon = ptr.querySelector('.ptr-icon')
+const PTR_TRIGGER = 60
+const PTR_MAX = 96
+let ptrStartY = null
+let ptrDist = 0
+let ptrBusy = false
+
+const atTop = () => (document.scrollingElement?.scrollTop ?? window.scrollY) <= 0
+
+function setPtr(dist) {
+  ptrDist = dist
+  const shown = Math.min(dist, PTR_MAX)
+  ptrBadge.style.transform = `translateY(${-52 + Math.min(shown, 62)}px)`
+  ptrBadge.style.opacity = String(Math.min(shown / PTR_TRIGGER, 1))
+  ptrIcon.style.transform = `rotate(${shown * 2.5}deg)`
+  ptr.classList.toggle('ready', dist >= PTR_TRIGGER)
+}
+
+window.addEventListener(
+  'touchstart',
+  (e) => {
+    ptrStartY = !ptrBusy && atTop() && e.touches.length === 1 ? e.touches[0].clientY : null
+  },
+  { passive: true },
+)
+window.addEventListener(
+  'touchmove',
+  (e) => {
+    if (ptrStartY === null) return
+    const dy = e.touches[0].clientY - ptrStartY
+    if (dy <= 0 || !atTop()) {
+      if (ptrDist) setPtr(0)
+      return
+    }
+    e.preventDefault() // take over the gesture from native scroll/bounce
+    setPtr(dy * 0.5) // resistance
+  },
+  { passive: false },
+)
+window.addEventListener('touchend', async () => {
+  if (ptrStartY === null) return
+  const trigger = ptrDist >= PTR_TRIGGER
+  ptrStartY = null
+  if (!trigger) return setPtr(0)
+  ptrBusy = true
+  ptr.classList.add('refreshing')
+  setPtr(PTR_TRIGGER) // hold the badge in view while it spins
+  ptrIcon.style.transform = '' // let the CSS spin animation drive it
+  try {
+    await runSync(false, true)
+  } finally {
+    ptr.classList.remove('refreshing')
+    setPtr(0)
+    ptrBusy = false
+  }
 })
 
 // Debug tab — dev builds only; the whole chunk is dropped from prod.
