@@ -206,11 +206,12 @@ keyboard-free weight picker, stats + charts, click-to-filter, bulk import.
 Backend live + clasp-managed from `apps-script/`. **Two-way background sync** done:
 instant local save, load-from-backend on new devices, id-keyed reconcile with
 deletes propagating (backend = shared truth), sync indicator + toast, debug
-divergence tools, unit + live-Sheet e2e tests.
+divergence tools, unit + live-Sheet e2e tests. **Shipped:** public repo
+`davidtorosyan/eggo`, deployed to GitHub Pages via `deploy.yml` — live at
+https://www.davidtorosyan.com/eggo/ (custom domain; relative `base` handles the
+`/eggo/` subpath).
 
-Pending: **PWA / install-to-home-screen + offline**; **deploy the frontend** —
-create the GitHub repo, enable Pages (source: GitHub Actions via the existing
-`deploy.yml`).
+Pending: **PWA / install-to-home-screen + offline**.
 
 Later (not yet needed): a **dedicated test Sheet + second deployment** so
 `test:e2e` stops clobbering real data once eggs accumulate.
