@@ -22,9 +22,13 @@ After save: color is kept (clutches match), chicken + weight reset.
 
 Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
 
-- **Log** (`log-view.js`): the entry form above, plus today's egg count and a
-  recent-history list (color dot, weight or "—", chicken, time). Two-tap delete
-  per row ("× → Sure?"). Undo after save.
+- **Log** (`log-view.js`): the entry form above, plus today's egg count (rendered
+  as one colored egg per egg, in its real color, capped at 8) and a recent-history
+  list (color dot, weight or "—", chicken, time). Two-tap delete per row ("× →
+  Sure?"). Undo after save.
+
+The header logo is three eggs — brown/blue/olive — built from a shared egg-shape
+SVG (`egg-icon.js`, reused by the today-count row).
 - **Stats** (`stats-view.js`): summary tiles (total / last 7 days / avg weight),
   and Chart.js charts — eggs/day (14d), cumulative total, avg weight trend,
   color doughnut, by-chicken bar. **Tap a color slice or hen bar to filter** the

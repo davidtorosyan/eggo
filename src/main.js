@@ -3,6 +3,7 @@ import { renderLog } from './log-view.js'
 import { renderStats } from './stats-view.js'
 import { getEntries, isDebugBackend } from './storage.js'
 import { pull } from './sync.js'
+import { eggLogo } from './egg-icon.js'
 
 const app = document.querySelector('#app')
 
@@ -10,7 +11,7 @@ app.innerHTML = `
   <main class="card">
     <header class="top">
       <h1>
-        <span class="egg">🥚</span> Eggo
+        <span class="logo">${eggLogo()}</span> Eggo
         <span id="debug-badge" class="debug-badge" hidden>DEBUG 🧪</span>
         <span id="sync-meter" class="sync-meter" hidden></span>
         <span id="sync-status" class="sync-status" role="status" aria-live="polite"></span>

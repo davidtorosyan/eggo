@@ -6,6 +6,7 @@ import {
   WEIGHT_MAX,
 } from './config.js'
 import { saveEgg, deleteEgg, getEntries } from './storage.js'
+import { eggSvg } from './egg-icon.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -190,11 +191,16 @@ export function renderLog(view, signal) {
       .slice()
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 
-    const todayCount = entries.filter(isToday).length
-    todayLine.textContent =
-      todayCount === 0
-        ? 'No eggs yet today'
-        : `${'🥚'.repeat(Math.min(todayCount, 8))} ${todayCount} today`
+    const todayEntries = entries.filter(isToday)
+    const todayCount = todayEntries.length
+    // One egg per egg, in its real color (oldest→newest), capped at 8.
+    const eggs = todayEntries
+      .slice(0, 8)
+      .reverse()
+      .map((e) => eggSvg(swatchFor(e.color)))
+      .join('')
+    todayLine.innerHTML =
+      todayCount === 0 ? 'No eggs yet today' : `${eggs} ${todayCount} today`
 
     historyEl.innerHTML = entries
       .slice(0, 12)

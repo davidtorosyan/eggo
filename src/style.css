@@ -62,8 +62,25 @@ h1 {
   gap: 8px;
 }
 
-.egg {
-  font-size: 1.2em;
+/* Three-egg logo (brown/blue/olive), slightly overlapped. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+}
+.egg-logo {
+  height: 1.5rem;
+  width: auto;
+}
+.egg-logo:not(:first-child) {
+  margin-left: -6px;
+}
+
+/* Colored eggs in the "N today" line. */
+.egg-ic {
+  height: 1.1em;
+  width: auto;
+  vertical-align: -0.2em;
+  margin-right: 1px;
 }
 
 .tabs {
