@@ -26,6 +26,7 @@ import {
 } from './sync.js'
 import { parseImport } from './import.js'
 import { CHICKENS } from './config.js'
+import { notificationsState, enableNotifications, notifyNewEgg } from './push.js'
 
 export function renderDebug(view) {
   const entries = getEntries()
@@ -59,6 +60,12 @@ export function renderDebug(view) {
     <div class="debug-actions">
       <button type="button" class="debug-btn" id="d-pull">Pull</button>
       <button type="button" class="debug-btn" id="d-push">Push</button>
+    </div>
+
+    <div class="field-label">Notifications <span class="optional">${notifyStateText()}</span></div>
+    <div class="debug-actions">
+      <button type="button" class="debug-btn" id="d-notify-enable">Enable</button>
+      <button type="button" class="debug-btn" id="d-notify-test">Send test push</button>
     </div>
 
     ${
@@ -131,6 +138,18 @@ export function renderDebug(view) {
     note.textContent = 'Pushing…'
     const ok = await flush()
     rerender(ok ? 'Pushed unsynced entries + deletes.' : 'Push incomplete (offline?).')
+  })
+
+  // --- Notifications: enable on this device, or fire a test push to the OTHER
+  // devices via the active backend (prod sends; debug backend no-ops). ---
+  on('#d-notify-enable', async () => {
+    note.textContent = 'Requesting permission…'
+    const ok = await enableNotifications()
+    rerender(ok ? 'Notifications enabled on this device.' : 'Not enabled (unsupported, not installed, or denied).')
+  })
+  on('#d-notify-test', () => {
+    notifyNewEgg({ color: 'brown', chicken: 'Goldilocks' })
+    note.textContent = 'Test push sent to the backend (prod sends; debug no-ops).'
   })
 
   // --- Import + wipe (always available; both local-only) ---
@@ -243,6 +262,16 @@ export function renderDebug(view) {
       })
     })
   }
+}
+
+// One-line summary of where push stands on this device, for the Debug header.
+function notifyStateText() {
+  const s = notificationsState()
+  if (!s.supported) return '(unsupported — no app id / insecure context)'
+  if (s.enabled) return '(on ✓)'
+  if (s.denied) return '(blocked)'
+  if (s.needsInstall) return '(iOS — add to home screen first)'
+  return '(off)'
 }
 
 // Two-tap confirm: first tap arms (and auto-disarms after 3s), second tap fires.

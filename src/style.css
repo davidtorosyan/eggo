@@ -519,6 +519,37 @@ h1 {
   white-space: pre-line;
 }
 
+/* Notifications opt-in */
+.notify-panel {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.notify-hint {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.notify-hint.on {
+  color: var(--accent-deep);
+}
+.notify-btn {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.notify-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Today + history */
 .today {
   margin-top: 10px;

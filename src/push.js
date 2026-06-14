@@ -1,0 +1,144 @@
+// Cross-device push notifications via OneSignal (the page SDK). OneSignal owns
+// VAPID/encryption/iOS delivery; our Apps Script backend triggers a send on a
+// real-time egg add (see apps-script/Code.js `notify_`). This module is the
+// client half: load + init the SDK, the opt-in flow, and the fire-and-forget
+// "notify the others" POST.
+//
+// Everything no-ops while ONESIGNAL_APP_ID is blank, so the app is unaffected
+// until the OneSignal account is wired up.
+import { ONESIGNAL_APP_ID } from './config.js'
+import { endpoint } from './sync.js'
+import { uid } from './storage.js'
+
+const DEVICE_KEY = 'eggo-device-id'
+
+// A stable per-device id, generated once. We tag the OneSignal subscription with
+// it so the logging device can be excluded from its own notification (sender).
+export function deviceId() {
+  let id = localStorage.getItem(DEVICE_KEY)
+  if (!id) {
+    id = uid()
+    localStorage.setItem(DEVICE_KEY, id)
+  }
+  return id
+}
+
+// True only where push can actually work: a OneSignal app is configured, the
+// browser has SW + Notifications, and we're in a secure context (push won't
+// register on the plain-HTTP LAN dev URL).
+export function pushSupported() {
+  return Boolean(ONESIGNAL_APP_ID) &&
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    'Notification' in window &&
+    window.isSecureContext
+}
+
+// Running as an installed (standalone) PWA?
+export function isInstalled() {
+  return Boolean(
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.navigator.standalone,
+  )
+}
+
+// iOS/iPadOS is the one platform that ONLY delivers Web Push to an installed
+// PWA — desktop Chrome/Edge/Firefox and Android Chrome push from a normal tab.
+// (iPadOS 13+ reports as "MacIntel" but has touch points.)
+function isIOS() {
+  const ua = navigator.userAgent || ''
+  return /iphone|ipad|ipod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+// Synchronous snapshot for the opt-in UI. `enabled` uses the browser permission
+// as a good-enough proxy for "subscribed" (our enable flow grants both together).
+// `needsInstall` is the iOS-only case where the user must add to home screen
+// before push can work at all.
+export function notificationsState() {
+  const supported = pushSupported()
+  const permission = 'Notification' in window ? Notification.permission : 'default'
+  return {
+    supported,
+    installed: isInstalled(),
+    enabled: supported && permission === 'granted',
+    denied: supported && permission === 'denied',
+    needsInstall: supported && isIOS() && !isInstalled(),
+  }
+}
+
+// Run a fn once the OneSignal SDK is ready (its deferred-init queue).
+function withOneSignal(fn) {
+  window.OneSignalDeferred = window.OneSignalDeferred || []
+  window.OneSignalDeferred.push(fn)
+}
+
+let loaded = false
+// Load + init the OneSignal page SDK once, reusing OUR service worker (sw.js)
+// rather than letting OneSignal register a second one. No-op without an app id.
+export function loadOneSignal() {
+  if (loaded || !pushSupported()) return
+  loaded = true
+  withOneSignal(async (OneSignal) => {
+    await OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      // Point OneSignal at our SW (which importScripts its worker). Paths are
+      // relative to the site root; the app lives under /eggo/.
+      serviceWorkerParam: { scope: '/eggo/' },
+      serviceWorkerPath: 'eggo/sw.js',
+    })
+    // Re-assert the device tag if already subscribed (e.g. after a reinstall),
+    // so sender-exclusion keeps working.
+    if (OneSignal.Notifications.permission) {
+      OneSignal.User.addTag('device', deviceId())
+    }
+  })
+  const s = document.createElement('script')
+  s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'
+  s.defer = true
+  document.head.appendChild(s)
+}
+
+// Prompt + subscribe, then tag this device so it can be excluded as the sender.
+// Resolves to whether notifications ended up enabled.
+export function enableNotifications() {
+  return new Promise((resolve) => {
+    if (!pushSupported()) return resolve(false)
+    withOneSignal(async (OneSignal) => {
+      try {
+        await OneSignal.Notifications.requestPermission()
+        if (OneSignal.Notifications.permission) {
+          await OneSignal.User.PushSubscription.optIn()
+          OneSignal.User.addTag('device', deviceId())
+        }
+        resolve(Boolean(OneSignal.Notifications.permission))
+      } catch {
+        resolve(false)
+      }
+    })
+  })
+}
+
+// Best-effort "a new egg was logged" push to the OTHER devices. Fired ONLY from
+// the live save path — never imports, backlog, undo/delete, or sync — so it can't
+// fan out a stale flood. Failures are swallowed; the egg still syncs normally.
+// The backend only actually sends when its OneSignal Script Property is set
+// (prod), so the debug backend stays silent.
+export function notifyNewEgg(entry) {
+  if (!ONESIGNAL_APP_ID || !endpoint()) return
+  try {
+    fetch(endpoint(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'notify',
+        deviceId: deviceId(),
+        color: entry?.color ?? null,
+        chicken: entry?.chicken ?? null,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* best-effort */
+  }
+}

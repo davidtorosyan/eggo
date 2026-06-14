@@ -43,8 +43,64 @@ function doPost(e) {
   if (action === 'batch') {
     return json({ ok: true, upserted: batchUpsert_(body.entries) });
   }
+  if (action === 'notify') {
+    return json({ ok: true, sent: notify_(body) });
+  }
   upsert_(body); // default: upsert a single entry
   return json({ ok: true });
+}
+
+// Fire a cross-device push via OneSignal when an egg is logged in real time. The
+// client posts this only from the live-save path (never imports/backlog/sync).
+//
+// Gated on Script Properties: ONESIGNAL_API_KEY (the secret REST key) and
+// ONESIGNAL_APP_ID. They're set on the PROD script only, so the debug script —
+// running this same code — is a silent no-op. Returns 1 if a send was attempted.
+//
+// The sender is excluded by a tag filter: each opted-in device tags its OneSignal
+// subscription `device=<deviceId>`, and we target everyone whose tag != the
+// logging device's id. Best-effort: failures are swallowed so a notify can never
+// break the (separate) data write.
+function notify_(body) {
+  var props = PropertiesService.getScriptProperties();
+  var apiKey = props.getProperty('ONESIGNAL_API_KEY');
+  var appId = props.getProperty('ONESIGNAL_APP_ID');
+  if (!apiKey || !appId) return 0; // not provisioned (e.g. debug backend) → no-op
+
+  var payload = {
+    app_id: appId,
+    target_channel: 'push',
+    included_segments: ['Subscribed Users'],
+    headings: { en: 'Eggo' },
+    contents: { en: notifyText_(body) },
+    url: 'https://www.davidtorosyan.com/eggo/',
+  };
+  if (body.deviceId) {
+    payload.filters = [
+      { field: 'tag', key: 'device', relation: '!=', value: String(body.deviceId) },
+    ];
+  }
+
+  try {
+    UrlFetchApp.fetch('https://api.onesignal.com/notifications', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Key ' + apiKey },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
+    });
+    return 1;
+  } catch (err) {
+    return 0; // never let a push failure surface to the client
+  }
+}
+
+// "🥚 A new <color> egg was logged" (+ hen when known).
+function notifyText_(body) {
+  var color = body.color ? String(body.color) : '';
+  var who = body.chicken ? ' by ' + String(body.chicken) : '';
+  var what = color ? 'A new ' + color + ' egg' : 'A new egg';
+  return '🥚 ' + what + ' was logged' + who;
 }
 
 // Append new rows without scanning the sheet — O(rows), not O(total). The client

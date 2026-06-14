@@ -16,7 +16,8 @@ import {
 } from './storage.js'
 
 // Resolved per call so the Debug-tab backend toggle takes effect immediately.
-function endpoint() {
+// Exported so the push module posts notifications to the same active backend.
+export function endpoint() {
   return isDebugBackend() && DEBUG_APPS_SCRIPT_URL
     ? DEBUG_APPS_SCRIPT_URL
     : APPS_SCRIPT_URL

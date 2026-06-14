@@ -4,6 +4,7 @@ import { renderStats } from './stats-view.js'
 import { getEntries, isDebugBackend } from './storage.js'
 import { pull } from './sync.js'
 import { eggLogo } from './egg-icon.js'
+import { loadOneSignal } from './push.js'
 
 const app = document.querySelector('#app')
 
@@ -154,6 +155,9 @@ function syncSummary(added, removed) {
 }
 
 runSync(true)
+// Load the OneSignal SDK so an already-subscribed device stays subscribed and the
+// opt-in control can work. No-op until ONESIGNAL_APP_ID is set + on insecure/LAN.
+loadOneSignal()
 window.addEventListener('online', () => runSync())
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) runSync()

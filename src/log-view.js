@@ -8,6 +8,7 @@ import {
 import { saveEgg, deleteEgg, getEntries, importEntries } from './storage.js'
 import { eggSpan, eggCluster } from './egg-icon.js'
 import { parseImport } from './import.js'
+import { notifyNewEgg, notificationsState, enableNotifications } from './push.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -78,6 +79,8 @@ export function renderLog(view, signal) {
         <p class="import-note" id="import-note" role="status"></p>
       </div>
     </section>
+
+    <section class="notify-panel" id="notify-panel" hidden></section>
   `
 
   const form = view.querySelector('#egg-form')
@@ -173,6 +176,10 @@ export function renderLog(view, signal) {
     const offlineNote =
       APPS_SCRIPT_URL && !navigator.onLine ? ' (offline — will sync later)' : ''
     showStatus(`Saved${weight === null ? '' : ` ${weight}g`}${offlineNote}`, entry.id)
+
+    // Best-effort: tell the other devices a new egg was logged. Live-save only —
+    // imports/undo/sync never call this, so it can't fan out a flood.
+    notifyNewEgg(entry)
 
     // Reset for the next egg: keep color (clutches often match), clear weight.
     tens = null
@@ -281,6 +288,34 @@ export function renderLog(view, signal) {
   })
 
   refreshHistory()
+
+  // --- Notifications opt-in: only meaningful on the installed PWA in a secure
+  // context with OneSignal configured. iOS needs a user tap to prompt. ---
+  const notifyPanel = view.querySelector('#notify-panel')
+  function renderNotify() {
+    const s = notificationsState()
+    if (!s.supported) {
+      notifyPanel.hidden = true // nothing we can do here; stay out of the way
+      return
+    }
+    notifyPanel.hidden = false
+    if (s.enabled) {
+      notifyPanel.innerHTML = `<p class="notify-hint on">🔔 Egg alerts are on.</p>`
+    } else if (s.denied) {
+      notifyPanel.innerHTML = `<p class="notify-hint">🔔 Notifications are blocked — turn them on for Eggo in your device settings.</p>`
+    } else if (s.needsInstall) {
+      notifyPanel.innerHTML = `<p class="notify-hint">🔔 Add Eggo to your home screen to get an alert when a new egg is logged.</p>`
+    } else {
+      notifyPanel.innerHTML = `<button type="button" class="notify-btn" id="notify-enable">🔔 Enable egg alerts</button>`
+      notifyPanel.querySelector('#notify-enable').addEventListener('click', async (e) => {
+        e.currentTarget.disabled = true
+        e.currentTarget.textContent = 'Enabling…'
+        await enableNotifications()
+        renderNotify()
+      })
+    }
+  }
+  renderNotify()
 
   // A background sync that changed local data refreshes the history list only,
   // leaving any in-progress form entry untouched. The signal unbinds this when

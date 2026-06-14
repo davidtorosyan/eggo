@@ -8,6 +8,10 @@ export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo0QeIp
 // tab's backend toggle, so testing never touches the real data.
 export const DEBUG_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwd9p1V7h3Rx4jVMC3hbYBlz0624zBDBzJI-pzz0smjwgkv9Jg_80b-OX-RTq4KmM1Sgw/exec'
 
+// OneSignal app id — public (client-side), safe to commit. The REST API key is a
+// secret and lives only in the prod Apps Script's Script Properties, never here.
+export const ONESIGNAL_APP_ID = '85dba675-175c-4cb9-9978-d68da1582d8b'
+
 // Egg colors offered in the entry form.
 export const COLORS = [
   { id: 'brown', label: 'Brown', swatch: '#8b5a3c' },

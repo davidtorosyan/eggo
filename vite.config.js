@@ -8,6 +8,18 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'autoUpdate', // new deploys take over silently on next load
+      // Hand-written service worker (src/sw.js): it importScripts OneSignal's
+      // worker (push + notificationclick + display) alongside Workbox precaching,
+      // so there's a single SW with no scope conflict. generateSW couldn't host
+      // the OneSignal import, hence injectManifest.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectRegister: 'auto',
+      // Build the SW as a classic (iife) worker, not an ES module: prod registers
+      // it with `type: 'classic'`, and `importScripts` (used in sw.js to pull in
+      // OneSignal's worker) only exists in classic workers.
+      injectManifest: { rollupFormat: 'iife' },
       includeAssets: ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Eggo — egg tracker',
