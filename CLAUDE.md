@@ -116,7 +116,11 @@ the network and the merge.
   `append` path, anything `attempted` (a retry or debug re-sync) via idempotent
   upsert — then drains the `pending-deletes` tombstones; serialized so overlapping
   triggers can't double-run. It marks entries `attempted` (and persists) *before*
-  the network call, so a lost response can't cause a duplicate append on retry. **`pull()`** GETs all rows, runs the pure **`reconcile()`**, persists,
+  the network call, so a lost response can't cause a duplicate append on retry.
+  Flag updates after the network merge by **id** into the *current* stored entries
+  (`setFlags`), never a stale whole-array write — otherwise a save landing during
+  a flush's await would be clobbered and lost (the rapid-add race). **`pull()`**
+  GETs all rows, runs the pure **`reconcile()`**, persists,
   then flushes. Triggers: app load, `online`, and `visibilitychange`.
 - **`reconcile(local, remote, pendingDeletes)`** is the pure, unit-tested core.
   **Backend is the shared source of truth:** a previously-synced entry missing

@@ -17,8 +17,14 @@ globalThis.localStorage = (() => {
   }
 })()
 
-const { getEntries, setEntries, getPendingDeletes, deleteEgg, setDebugBackend } =
-  await import('../../src/storage.js')
+const {
+  getEntries,
+  setEntries,
+  getPendingDeletes,
+  deleteEgg,
+  saveEgg,
+  setDebugBackend,
+} = await import('../../src/storage.js')
 const { pull, flush } = await import('../../src/sync.js')
 const { DEBUG_APPS_SCRIPT_URL: endpoint } = await import('../../src/config.js')
 
@@ -89,6 +95,21 @@ test('sync engine round-trips against the live Sheet', async (t) => {
     const { removed } = await pull()
     assert.equal(removed, 1)
     assert.ok(!getEntries().some((e) => e.id === 'phantom'))
+  })
+
+  await t.test('rapid concurrent saves do not lose entries', async () => {
+    localStorage.clear()
+    setDebugBackend(true)
+    await clearBackend()
+    // Second save lands while the first save's flush is awaiting the network —
+    // the flush must not clobber it with a stale snapshot.
+    saveEgg({ timestamp: '2026-06-13T07:00:00.000Z', weight: 40, color: 'brown', chicken: null })
+    saveEgg({ timestamp: '2026-06-13T07:01:00.000Z', weight: 41, color: 'blue', chicken: null })
+    await flush() // joins the in-flight flush + drains the queued rerun
+    const local = getEntries()
+    assert.equal(local.length, 2, 'both entries kept locally')
+    assert.ok(local.every((e) => e.synced), 'both marked synced')
+    assert.equal((await backendRows()).length, 2, 'both reached the backend')
   })
 
   await clearBackend() // leave the Sheet clean

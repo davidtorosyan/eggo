@@ -129,6 +129,22 @@ export function flush() {
   return flushing
 }
 
+// Merge flag changes into the CURRENT stored entries by id. Re-reads storage so
+// a save that lands while a flush is awaiting the network isn't clobbered by a
+// stale whole-array write (the race that could lose eggs on rapid adds).
+function setFlags(ids, flags) {
+  const set = new Set(ids)
+  const cur = getEntries()
+  let changed = false
+  for (const e of cur) {
+    if (set.has(e.id)) {
+      Object.assign(e, flags)
+      changed = true
+    }
+  }
+  if (changed) setEntries(cur)
+}
+
 async function doFlush() {
   const entries = getEntries()
   const unsynced = entries.filter((e) => !e.synced)
@@ -144,30 +160,30 @@ async function doFlush() {
     // retry, or a debug re-sync — upserts so it can't duplicate.
     const fresh = unsynced.filter((e) => !e.attempted)
     const resend = unsynced.filter((e) => e.attempted)
-    for (const e of unsynced) e.attempted = true
-    setEntries(entries) // persist intent before the network: a lost response
-    // turns these into `attempted` resends next time, never duplicate appends.
+    const ids = unsynced.map((e) => e.id)
+    setFlags(ids, { attempted: true }) // persist intent before the network: a lost
+    // response turns these into `attempted` resends next time, never dup appends.
     try {
       if (fresh.length) await appendRemote(fresh)
       if (resend.length) await batchUpsert(resend)
-      for (const e of unsynced) e.synced = true
-      setEntries(entries)
+      setFlags(ids, { synced: true })
     } catch {
       ok = false // network down — `attempted` stays set, so the retry upserts
     }
   }
 
   if (ok && pending.length) {
-    const remaining = []
+    const failed = []
     for (const id of pending) {
       try {
         await deleteRemote(id)
       } catch {
-        remaining.push(id)
+        failed.push(id)
       }
     }
-    setPendingDeletes(remaining)
-    if (remaining.length) ok = false
+    const cleared = new Set(pending.filter((id) => !failed.includes(id)))
+    setPendingDeletes(getPendingDeletes().filter((id) => !cleared.has(id)))
+    if (failed.length) ok = false
   }
 
   emit({ kind: 'push', phase: 'end', ok, ms: Date.now() - t0 })
