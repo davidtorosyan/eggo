@@ -68,18 +68,18 @@ h1 {
   align-items: center;
 }
 .egg-logo {
-  height: 1.5rem;
+  height: 1.7rem;
   width: auto;
 }
 .egg-logo:not(:first-child) {
-  margin-left: -6px;
+  margin-left: -7px;
 }
 
 /* Colored eggs in the "N today" line. */
 .egg-ic {
-  height: 1.1em;
+  height: 1.35em;
   width: auto;
-  vertical-align: -0.2em;
+  vertical-align: -0.3em;
   margin-right: 1px;
 }
 
