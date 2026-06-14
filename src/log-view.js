@@ -6,7 +6,7 @@ import {
   WEIGHT_MAX,
 } from './config.js'
 import { saveEgg, deleteEgg, getEntries } from './storage.js'
-import { eggSpan } from './egg-icon.js'
+import { eggSpan, eggCluster } from './egg-icon.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -191,16 +191,20 @@ export function renderLog(view, signal) {
       .slice()
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 
+    const CAP = 8
     const todayEntries = entries.filter(isToday)
     const todayCount = todayEntries.length
-    // One egg per egg, in its real color (oldest→newest), capped at 8.
-    const eggs = todayEntries
-      .slice(0, 8)
-      .reverse()
-      .map((e) => eggSpan(swatchFor(e.color)))
-      .join('')
+    // One egg per egg in its real color (oldest→newest). Past the cap, the first
+    // slot becomes a "many eggs" cluster (same width, so the line doesn't shift).
+    const recent = todayEntries.slice(0, CAP).reverse()
+    const eggs =
+      todayCount > CAP
+        ? eggCluster() + recent.slice(1).map((e) => eggSpan(swatchFor(e.color))).join('')
+        : recent.map((e) => eggSpan(swatchFor(e.color))).join('')
     todayLine.innerHTML =
-      todayCount === 0 ? 'No eggs yet today' : `${eggs} ${todayCount} today`
+      todayCount === 0
+        ? 'No eggs yet today'
+        : `${eggs} <span class="today-n">${todayCount} today</span>`
 
     historyEl.innerHTML = entries
       .slice(0, 12)

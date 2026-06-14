@@ -84,6 +84,35 @@ h1 {
   margin-right: 2px;
 }
 
+/* "Many eggs" cluster: three small eggs in one egg's footprint (the today eggs
+   render at .swatch's 18x22), so swapping it in for the first egg never shifts
+   the line width. */
+.egg-cluster {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 22px;
+  vertical-align: -3px;
+  margin-right: 2px;
+}
+.egg-cluster .swatch {
+  position: absolute;
+  width: 11px;
+  height: 13px;
+}
+.egg-cluster .c0 {
+  left: 0;
+  top: 9px;
+}
+.egg-cluster .c1 {
+  right: 0;
+  top: 9px;
+}
+.egg-cluster .c2 {
+  left: 3.5px;
+  top: 0;
+}
+
 .tabs {
   display: flex;
   gap: 4px;

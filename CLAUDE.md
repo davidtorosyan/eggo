@@ -22,10 +22,11 @@ After save: color is kept (clutches match), chicken + weight reset.
 
 Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
 
-- **Log** (`log-view.js`): the entry form above, plus today's egg count (rendered
-  as one colored egg per egg, in its real color, capped at 8) and a recent-history
-  list (color dot, weight or "—", chicken, time). Two-tap delete per row ("× →
-  Sure?"). Undo after save.
+- **Log** (`log-view.js`): the entry form above, plus today's egg count (one
+  colored egg per egg in its real color, capped at 8; past the cap the first slot
+  becomes a "many eggs" cluster glyph of the same width, so the line doesn't
+  shift) and a recent-history list (color dot, weight or "—", chicken, time).
+  Two-tap delete per row ("× → Sure?"). Undo after save.
 
 The header logo is three eggs — brown/blue/olive — and the today-count eggs both
 reuse the color-selector's `.swatch` egg shape (via `egg-icon.js`), so there's a

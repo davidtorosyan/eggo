@@ -11,3 +11,14 @@ export function eggSpan(fill, cls = 'egg-ic') {
 export function eggLogo() {
   return COLORS.map((c) => eggSpan(c.swatch, 'egg-logo')).join('')
 }
+
+// A "many eggs" glyph — three overlapped eggs packed into a single egg's
+// footprint, so it can replace the first egg in the today row without changing
+// the line's width. Uses the same `.swatch` egg shape.
+export function eggCluster() {
+  return (
+    '<span class="egg-cluster" role="img" aria-label="many eggs">' +
+    COLORS.map((c, i) => `<span class="swatch c${i}" style="--swatch:${c.swatch}"></span>`).join('') +
+    '</span>'
+  )
+}
