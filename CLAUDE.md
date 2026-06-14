@@ -97,7 +97,16 @@ Imported entries get noon + 1min/egg timestamps (notes have no times).
 ## Architecture
 
 - **Frontend:** static site, Vite + vanilla JS, hosted on **GitHub Pages**
-  (deploy workflow in `.github/workflows/deploy.yml`).
+  (deploy workflow in `.github/workflows/deploy.yml`). Vite `base: '/eggo/'`
+  (the Pages sub-path; required absolute for the PWA service-worker scope).
+- **PWA** (`vite-plugin-pwa`, configured in `vite.config.js`): installable +
+  offline. Manifest (name/icons/standalone/cream theme) + a Workbox service
+  worker that precaches the app shell with `registerType: 'autoUpdate'` (new
+  deploys take over on next load). Icons + `apple-touch-icon` live in `public/`
+  (generated from the egg shape). **SW needs a secure context** — it does NOT
+  register on the plain-HTTP LAN dev URL; test PWA via `npm run preview`
+  (localhost) or the live HTTPS site. Offline *sync* was already handled by the
+  localStorage queue; the SW just makes the shell load offline.
 - **Storage:** a Google Sheet. The static site POSTs to a **Google Apps Script
   web app** (`apps-script/Code.js`) attached to the Sheet — the Sheets API can't
   take anonymous writes and OAuth can't be embedded in a public page. Reads can
@@ -170,7 +179,7 @@ the anonymous-execution consent).
 - Dev on a Windows desktop; testing on a phone over the LAN.
 - On dev start, **detect the current local IPv4** (`Get-NetIPAddress`, the Wi-Fi
   adapter — not VirtualBox/Hyper-V virtuals) and give the user the exact
-  `http://<ip>:5173` URL.
+  `http://<ip>:5173/eggo/` URL (note the `/eggo/` sub-path — vite `base`).
 - **Never write the local IP (or any machine-specific detail) into a git-tracked
   file.** This repo is public. Detect fresh each session (DHCP changes it).
   Machine-specific notes go in `CLAUDE.local.md` (gitignored), as is
@@ -183,10 +192,12 @@ the anonymous-execution consent).
   regression review across states and viewports.
 - After changing user-facing behavior, verify by driving the real app in a
   headless browser — don't stop at "the build passed."
-- **Test via the LAN IP URL (`http://<detected-ip>:5173`), never localhost.**
+- **Test via the LAN IP URL (`http://<detected-ip>:5173/eggo/`), never localhost.**
   localhost is a secure context and the LAN IP is not; localhost masks bugs that
   only appear on the phone (e.g. `crypto.randomUUID` is undefined in insecure
-  contexts and silently broke saving — hence `uid()`).
+  contexts and silently broke saving — hence `uid()`). Exception: **PWA/service
+  worker** needs a secure context, so it can't be tested on the LAN IP — use
+  `npm run preview` (localhost) or the live HTTPS site for that.
 - **Use the iPhone 15 Pro Safari viewport: 393×660** (NOT the 852px hardware
   height — Safari's chrome eats ~190px). The full log flow must fit above the
   fold at that size.
@@ -211,7 +222,8 @@ divergence tools, unit + live-Sheet e2e tests. **Shipped:** public repo
 https://www.davidtorosyan.com/eggo/ (custom domain; relative `base` handles the
 `/eggo/` subpath).
 
-Pending: **PWA / install-to-home-screen + offline**.
+**PWA done:** installable (manifest + icons) and offline (Workbox SW precaches
+the shell, auto-update) via `vite-plugin-pwa`. Nothing major pending.
 
 Later (not yet needed): a **dedicated test Sheet + second deployment** so
 `test:e2e` stops clobbering real data once eggs accumulate.
