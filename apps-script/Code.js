@@ -67,19 +67,21 @@ function notify_(body) {
   var appId = props.getProperty('ONESIGNAL_APP_ID');
   if (!apiKey || !appId) return 0; // not provisioned (e.g. debug backend) → no-op
 
+  // Target by the device tag, not a named segment: this app's "Subscribed Users"
+  // segment resolves empty (newer OneSignal subscription model), and mixing a
+  // segment with filters makes the whole send fail. The `device != sender` filter
+  // both reaches every subscriber and excludes the logging device. An empty value
+  // (no deviceId) still matches all subscribers, so it degrades to "notify all".
   var payload = {
     app_id: appId,
     target_channel: 'push',
-    included_segments: ['Subscribed Users'],
+    filters: [
+      { field: 'tag', key: 'device', relation: '!=', value: String(body.deviceId || '') },
+    ],
     headings: { en: 'Eggo' },
     contents: { en: notifyText_(body) },
     url: 'https://www.davidtorosyan.com/eggo/',
   };
-  if (body.deviceId) {
-    payload.filters = [
-      { field: 'tag', key: 'device', relation: '!=', value: String(body.deviceId) },
-    ];
-  }
 
   try {
     UrlFetchApp.fetch('https://api.onesignal.com/notifications', {
@@ -207,9 +209,16 @@ function ensureHeader_(sheet) {
 }
 
 // Run this once from the editor (Run ▸ authorize) on a fresh script to grant the
-// Spreadsheet permission that an anonymous "execute as me" web app needs.
+// permissions an anonymous "execute as me" web app needs: Spreadsheet access AND
+// external requests (UrlFetchApp), the latter required by notify_ to call the
+// OneSignal REST API. Touching both here means a single authorize run consents to
+// both scopes.
 function authorize() {
   SpreadsheetApp.getActiveSpreadsheet().getName();
+  UrlFetchApp.fetch('https://api.onesignal.com/notifications', {
+    method: 'get',
+    muteHttpExceptions: true,
+  });
 }
 
 function json(obj) {
