@@ -5,8 +5,9 @@ import {
   WEIGHT_MIN,
   WEIGHT_MAX,
 } from './config.js'
-import { saveEgg, deleteEgg, getEntries } from './storage.js'
+import { saveEgg, deleteEgg, getEntries, importEntries } from './storage.js'
 import { eggSpan, eggCluster } from './egg-icon.js'
+import { parseImport } from './import.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -64,6 +65,18 @@ export function renderLog(view, signal) {
     <section class="today">
       <h2 id="today-line"></h2>
       <ul id="history"></ul>
+    </section>
+
+    <section class="import-panel">
+      <button type="button" class="import-toggle" id="import-toggle" aria-expanded="false">
+        Import eggs ▾
+      </button>
+      <div class="import-body hidden" id="import-body">
+        <textarea class="import-text" id="import-text" rows="5" spellcheck="false"
+          placeholder="June 12&#10;Egg (brown) - 46g - Goldilocks&#10;Egg (olive) - 30g"></textarea>
+        <button type="button" class="import-go" id="import-go">Import</button>
+        <p class="import-note" id="import-note" role="status"></p>
+      </div>
     </section>
   `
 
@@ -235,6 +248,35 @@ export function renderLog(view, signal) {
       return
     }
     deleteEgg(btn.dataset.id)
+    refreshHistory()
+  })
+
+  // --- Import: a collapsible textarea, same parser as the Debug tab ---
+  const importToggle = view.querySelector('#import-toggle')
+  const importBody = view.querySelector('#import-body')
+  const importText = view.querySelector('#import-text')
+  const importNote = view.querySelector('#import-note')
+
+  importToggle.addEventListener('click', () => {
+    const open = !importBody.classList.toggle('hidden')
+    importToggle.setAttribute('aria-expanded', String(open))
+    importToggle.textContent = open ? 'Import eggs ▴' : 'Import eggs ▾'
+    if (open) importText.focus()
+  })
+
+  view.querySelector('#import-go').addEventListener('click', () => {
+    const { entries: imported, errors } = parseImport(importText.value)
+    if (errors.length) {
+      importNote.textContent = `Nothing imported:\n${errors.join('\n')}`
+      return
+    }
+    if (imported.length === 0) {
+      importNote.textContent = 'Nothing to import.'
+      return
+    }
+    importEntries(imported)
+    importText.value = ''
+    importNote.textContent = `Imported ${imported.length} egg${imported.length === 1 ? '' : 's'}.`
     refreshHistory()
   })
 

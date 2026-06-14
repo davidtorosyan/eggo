@@ -419,6 +419,59 @@ h1 {
   padding: 4px 6px;
 }
 
+/* Import panel (Log tab): a collapsible bulk-import textarea. */
+.import-panel {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.import-toggle {
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.import-body {
+  margin-top: 6px;
+}
+.import-body.hidden {
+  display: none;
+}
+.import-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font: inherit;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  resize: vertical;
+}
+.import-go {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.import-note {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+  white-space: pre-line;
+}
+
 /* Today + history */
 .today {
   margin-top: 10px;

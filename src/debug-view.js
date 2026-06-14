@@ -12,6 +12,7 @@ import {
   getLastPull,
   isDebugBackend,
   setDebugBackend,
+  importEntries,
   uid,
 } from './storage.js'
 import {
@@ -144,11 +145,7 @@ export function renderDebug(view) {
       note.textContent = 'Nothing to import.'
       return
     }
-    setEntries(
-      [...getEntries(), ...imported].sort((a, b) =>
-        a.timestamp.localeCompare(b.timestamp),
-      ),
-    )
+    importEntries(imported)
     rerender(`Imported ${imported.length} egg${imported.length === 1 ? '' : 's'}.`)
   })
   on('#d-wipe', (e) => {

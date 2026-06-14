@@ -73,6 +73,17 @@ export function saveEgg(data) {
   return { entry }
 }
 
+// Add a batch of already-parsed entries (bulk import) and sync them in the
+// background, keeping the list time-ordered.
+export function importEntries(entries) {
+  setEntries(
+    [...getEntries(), ...entries].sort((a, b) =>
+      a.timestamp.localeCompare(b.timestamp),
+    ),
+  )
+  void flush()
+}
+
 // Remove locally. If the entry was already on the backend, queue a remote
 // delete so the deletion propagates to other devices.
 export function deleteEgg(id) {
