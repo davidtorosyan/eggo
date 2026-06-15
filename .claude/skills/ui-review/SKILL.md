@@ -21,10 +21,22 @@ show, not what the CSS says.
    `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
    `headless: 'new'`. Attach `pageerror` and console-error listeners; any
    error is an automatic finding.
+4. **⚠️ Route saves to the DEBUG backend, not prod.** The dev server syncs to the
+   **production** Sheet by default, so any egg the test saves (states 3 & 4 below)
+   gets pushed to real data and persists there — `localStorage.clear()` only wipes
+   it locally, not the backend. Before saving anything, set the debug-backend flag
+   so test saves land on the throwaway debug Sheet:
+   `localStorage.setItem('eggo-debug-backend','true')`. Set it **after** the
+   determinism `localStorage.clear()` and **before** the first `#save` click
+   (`endpoint()` reads the flag live per push — no reload needed). Verify afterward
+   that no stray rows hit prod. (History: a ui-review run once pushed a 52g brown
+   egg to prod because this flag wasn't set.)
 
 ## States to capture
 
-Wipe localStorage first so runs are deterministic. Capture at **393×660**
+Wipe localStorage first so runs are deterministic, then immediately re-set the
+`eggo-debug-backend` flag (Setup step 4) so the saves below don't hit prod.
+Capture at **393×660**
 unless noted — that's the user's iPhone 15 Pro (393 CSS px wide) with mobile
 Safari's URL bar/toolbar visible, NOT the 852px hardware height. Testing at
 full hardware height hides above-the-fold problems Safari users see:
