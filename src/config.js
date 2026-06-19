@@ -39,3 +39,13 @@ export const CHICKENS = [
 // Weight picker range (grams): drives the tens-row buttons (20s..70s).
 export const WEIGHT_MIN = 20
 export const WEIGHT_MAX = 79
+
+// Optional egg condition. null/absent = a normal, healthy egg; the rest flag a
+// problem. Extensible — add an entry (id + label + emoji) and it shows up in the
+// condition popup and history automatically. HEALTHY is the default/no-problem
+// state shown on the trigger button. (Emoji are easy to swap to taste.)
+export const HEALTHY = { label: 'Healthy', emoji: '🥚' }
+export const CONDITIONS = [
+  { id: 'broken', label: 'Broken shell', emoji: '💥' },
+  { id: 'soft', label: 'Soft shell', emoji: '💧' },
+]

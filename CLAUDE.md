@@ -16,7 +16,11 @@ The form order is **Color → Chicken → Weight → Save** (weight last, intent
    weight). Digits are locked/dimmed until a tens is chosen. A × clears it.
 4. **Save egg** → stored locally; status pill shows "Saved [Ng]" with Undo.
 
-After save: color is kept (clutches match), chicken + weight reset.
+A small **condition** button sits to the right of Save (a 🥚 emoji that opens a
+popup): healthy by default, or flag **broken/soft shell** (`CONDITIONS` in
+`config.js`, extensible). Rare, so it stays out of the fast path.
+
+After save: color is kept (clutches match), chicken + weight + condition reset.
 
 ## Current state (what's built)
 
@@ -25,8 +29,11 @@ Three tabs in the app shell (`main.js`): **Log**, **Stats**, **Debug**.
 - **Log** (`log-view.js`): the entry form above, plus today's egg count (one
   colored egg per egg in its real color, capped at 8; past the cap the first slot
   becomes a "many eggs" cluster glyph of the same width, so the line doesn't
-  shift) and a recent-history list (color dot, weight or "—", chicken, time).
-  Two-tap delete per row ("× → Sure?"). Undo after save.
+  shift) and a recent-history list (color dot, weight or "—", chicken, time). A
+  flagged condition shows as an emoji prefix on the row (tap it for the label);
+  the row gets a faint tint. **Per-row edit (✎)** prefills the form into "Update"
+  mode (Cancel to back out) — see Editing below. Two-tap delete per row
+  ("× → Sure?"). Undo after save.
 
 The header logo is three eggs — brown/blue/olive — and the today-count eggs both
 reuse the color-selector's `.swatch` egg shape (via `egg-icon.js`), so there's a
@@ -62,9 +69,11 @@ toast announces when a pull changed data ("Loaded N eggs from the cloud").
 Entry (localStorage key `eggo-entries`, array):
 ```
 { id, timestamp (ISO), weight (number|null), color ('brown'|'blue'|'olive'),
-  chicken (string|null), synced (bool), seeded? (bool) }
+  chicken (string|null), condition (null|'broken'|'soft'), synced (bool), seeded? (bool) }
 ```
-- `weight` and `chicken` are both nullable; stats/avg/weight-chart skip nulls.
+- `weight`, `chicken`, and `condition` are all nullable; stats skip null weight.
+  `condition` (null = healthy) flags a bad egg — see `CONDITIONS` in `config.js`
+  (extensible; each has an `id`, `label`, and `emoji`).
 - `uid()` in `storage.js` is used for ids (NOT `crypto.randomUUID` — see below).
   The `id` is the cross-device identity key and is persisted to the Sheet.
 - `synced: false` = a local add not yet on the backend. `seeded` is just a marker
@@ -77,7 +86,12 @@ Entry (localStorage key `eggo-entries`, array):
   locally, awaiting a backend delete — a tombstone queue), `eggo-last-pull` (ISO
   time of the last successful pull), and `eggo-debug-backend` (`'true'` routes
   sync to `DEBUG_APPS_SCRIPT_URL`; only ever set via the dev Debug tab).
-- **Sheet schema** (row 1 = header): `[id, timestamp, weight, color, chicken]`.
+- **Sheet schema** (row 1 = header): `[id, timestamp, weight, color, chicken, condition]`.
+  `ensureHeader_` rewrites the header on any write, so an old 5-col sheet gains the
+  `condition` column on the first write after deploy (existing rows read as null).
+- **Editing** (`updateEgg` in `storage.js`): entries are mutable now. An edit to a
+  synced entry marks it `synced:false, attempted:true` so `flush()` re-pushes via
+  the idempotent upsert (not a duplicate append). See the Sync caveat below.
 - Flock roster + each hen's egg color live in `config.js` (`CHICKENS`). The
   color drives the smart chicken picker.
 
@@ -137,8 +151,13 @@ the network and the merge.
   **Backend is the shared source of truth:** a previously-synced entry missing
   from the backend was deleted elsewhere → dropped locally (deletes propagate).
   Never-synced local entries are always kept + pushed; `seeded` entries pass
-  through untouched. Entries are treated as immutable (no edit feature), so an id
-  in both sides is identical — no field-level conflict resolution.
+  through untouched. **`reconcile` keeps the local copy** for an id present on both
+  sides (no field-level merge from remote). With edits (`updateEgg`), an edited
+  entry is re-pushed via upsert and local wins — fine for a ~2-device household.
+  Caveat: if a `pull` lands in the narrow window between an edit and its `flush`,
+  `reconcile` can mark the entry synced before the edit reaches the backend, so
+  that edit may not propagate (local stays correct). Acceptable for now; harden
+  with an edit-dirty flag if it ever bites.
 
 ### Managing the Apps Script (clasp)
 
@@ -215,7 +234,8 @@ the anonymous-execution consent).
 
 ## Roadmap
 
-Done: dev seed tools, today view + history, undo/delete, smart chicken picker,
+Done: dev seed tools, today view + history, undo/delete, **per-row edit**,
+**egg condition flag** (broken/soft shell, emoji popup), smart chicken picker,
 keyboard-free weight picker, stats + charts, click-to-filter, bulk import (Debug
 tab + a Log-tab import panel). Backend live + clasp-managed from `apps-script/`.
 **Two-way background sync** done: instant local save (O(1) append fast path),

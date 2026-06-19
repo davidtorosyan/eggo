@@ -26,7 +26,8 @@ body {
   margin: 0;
   min-height: 100dvh;
   display: grid;
-  place-items: start center;
+  grid-template-columns: minmax(0, 1fr); /* column tracks the viewport, not content — keeps the card from growing past it */
+  place-items: start stretch; /* card fills the capped column (rows ellipsize inside) rather than sizing to content */
   background: var(--bg);
   color: var(--ink);
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -38,6 +39,8 @@ body {
 .card {
   width: 100%;
   max-width: 420px;
+  min-width: 0; /* grid item: don't let wide content (history rows) grow the card past the viewport */
+  margin: 0 auto; /* center within the stretched column on desktop */
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 8px);
@@ -331,6 +334,104 @@ h1 {
   opacity: 0.6;
 }
 
+/* Condition: a small emoji button that opens a popup menu. Healthy by default;
+   flagged (a problem) tints it so it stands out. */
+.cond-control {
+  position: relative;
+  flex: none;
+}
+.cond-btn {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 12px;
+  font-size: 1.3rem;
+  line-height: 1;
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.cond-btn.flagged {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, white);
+}
+.cond-caret {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+.cond-pop {
+  position: absolute;
+  bottom: calc(100% + 6px); /* open upward — the button sits low on the screen */
+  right: 0; /* anchor to the right edge (button sits at the row's right) so it stays in bounds */
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(60, 40, 20, 0.18);
+}
+.cond-pop.hidden {
+  display: none;
+}
+.cond-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cond-opt.active {
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  color: var(--accent-deep);
+}
+
+/* Save + Cancel + the condition button share a row; Cancel only shows editing */
+.save-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.save-row #save {
+  margin-top: 0;
+  flex: 1;
+}
+.cancel-edit {
+  flex: none;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.cancel-edit.hidden {
+  display: none;
+}
+
+/* Editing an existing entry: ring the form so it's clearly not a new egg.
+   outline (not box-shadow) so it can't create horizontal overflow. */
+form.editing {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 4px;
+  border-radius: var(--radius);
+}
+
 /* Status + undo — a soft pill so it reads as a toast, not stray text */
 #status {
   width: fit-content;
@@ -573,7 +674,7 @@ h1 {
 #history li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   padding: 9px 2px;
   border-bottom: 1px solid var(--line);
 }
@@ -584,11 +685,12 @@ h1 {
 
 .h-weight {
   font-weight: 700;
-  min-width: 3.4em;
+  min-width: 3em;
 }
 
 .h-meta {
   flex: 1;
+  min-width: 0; /* allow the chicken name to ellipsize instead of holding the row wide */
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -597,7 +699,7 @@ h1 {
 
 .h-time {
   color: var(--ink-soft);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .h-del {
@@ -619,6 +721,51 @@ h1 {
   color: white;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.h-edit {
+  flex: none;
+  width: 38px;
+  height: 42px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.h-edit:active {
+  transform: scale(0.9);
+}
+
+/* Condition flag in a history row — an emoji prefixing the chicken meta, so it
+   costs no fixed row width and survives the meta's end-ellipsis. Tap it to see
+   the label (cond-tip); the full label is also in the condition popup. */
+.h-cond {
+  font-size: 0.95rem;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+/* Tooltip shown when a history condition emoji is tapped. Fixed-positioned on the
+   body (not inside the row) so h-meta's overflow:hidden can't clip it. */
+.cond-tip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 6px));
+  z-index: 50;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgb(61 50 41 / 0.25);
+}
+#history li.bad {
+  background: color-mix(in srgb, var(--danger) 5%, transparent);
 }
 
 /* Stats */

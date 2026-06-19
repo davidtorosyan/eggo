@@ -88,6 +88,7 @@ const strip = (e) => ({
   weight: e.weight ?? null,
   color: e.color,
   chicken: e.chicken ?? null,
+  condition: e.condition ?? null,
 })
 
 // Brand-new entries: append without an id-scan — O(1) regardless of sheet size.

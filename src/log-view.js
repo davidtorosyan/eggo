@@ -2,10 +2,12 @@ import {
   APPS_SCRIPT_URL,
   COLORS,
   CHICKENS,
+  CONDITIONS,
+  HEALTHY,
   WEIGHT_MIN,
   WEIGHT_MAX,
 } from './config.js'
-import { saveEgg, deleteEgg, getEntries, importEntries } from './storage.js'
+import { saveEgg, updateEgg, deleteEgg, getEntries, importEntries } from './storage.js'
 import { eggSpan, eggCluster } from './egg-icon.js'
 import { parseImport } from './import.js'
 import { notifyNewEgg, notificationsState, enableNotifications } from './push.js'
@@ -58,7 +60,22 @@ export function renderLog(view, signal) {
         ).join('')}
       </div>
 
-      <button type="submit" id="save">Save egg</button>
+      <div class="save-row">
+        <button type="submit" id="save">Save egg</button>
+        <button type="button" id="cancel-edit" class="cancel-edit hidden">Cancel</button>
+        <div class="cond-control">
+          <button type="button" class="cond-btn" id="cond-btn"
+                  aria-haspopup="menu" aria-expanded="false" aria-label="Egg condition">
+            <span id="cond-emoji">${HEALTHY.emoji}</span><span class="cond-caret">▾</span>
+          </button>
+          <div class="cond-pop hidden" id="cond-pop" role="menu">
+            <button type="button" class="cond-opt" data-cond="" role="menuitem">${HEALTHY.emoji} ${HEALTHY.label}</button>
+            ${CONDITIONS.map(
+              (c) => `<button type="button" class="cond-opt" data-cond="${c.id}" role="menuitem">${c.emoji} ${c.label}</button>`,
+            ).join('')}
+          </div>
+        </div>
+      </div>
     </form>
 
     <p id="status" role="status"></p>
@@ -86,7 +103,11 @@ export function renderLog(view, signal) {
   const form = view.querySelector('#egg-form')
   const weightValue = view.querySelector('#w-value')
   const chickenRow = view.querySelector('#chicken-row')
+  const condBtn = view.querySelector('#cond-btn')
+  const condPop = view.querySelector('#cond-pop')
+  const condEmoji = view.querySelector('#cond-emoji')
   const saveButton = view.querySelector('#save')
+  const cancelButton = view.querySelector('#cancel-edit')
   const statusEl = view.querySelector('#status')
   const todayLine = view.querySelector('#today-line')
   const historyEl = view.querySelector('#history')
@@ -153,11 +174,117 @@ export function renderLog(view, signal) {
   )
   renderChickens()
 
-  // --- Save + undo ---
+  // --- Condition picker: rare, so it hides behind a small emoji button that
+  // opens a popup menu. Healthy (🥚, null) by default; picking a problem tints
+  // the button so it stands out. ---
+  let condition = null
+  function closeCondPop() {
+    condPop.classList.add('hidden')
+    condBtn.setAttribute('aria-expanded', 'false')
+  }
+  function updateCondition() {
+    const c = CONDITIONS.find((x) => x.id === condition)
+    condEmoji.textContent = c ? c.emoji : HEALTHY.emoji
+    condBtn.classList.toggle('flagged', condition !== null)
+    condBtn.setAttribute(
+      'aria-label',
+      `Egg condition: ${c ? c.label : HEALTHY.label}`,
+    )
+    condPop
+      .querySelectorAll('[data-cond]')
+      .forEach((b) => b.classList.toggle('active', (b.dataset.cond || null) === condition))
+  }
+  condBtn.addEventListener('click', () => {
+    const open = condPop.classList.toggle('hidden')
+    condBtn.setAttribute('aria-expanded', String(!open))
+  })
+  condPop.addEventListener('click', (e) => {
+    const opt = e.target.closest('[data-cond]')
+    if (!opt) return
+    condition = opt.dataset.cond || null
+    updateCondition()
+    closeCondPop()
+  })
+  // Close the popup on an outside tap (cleaned up on view teardown via signal).
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (!condPop.classList.contains('hidden') && !e.target.closest('.cond-control')) {
+        closeCondPop()
+      }
+    },
+    { signal },
+  )
+  updateCondition()
+
+  // --- Edit mode: when editingId is set, the form edits an existing entry
+  // (prefilled) instead of adding a new one. Reuses every picker above. ---
+  let editingId = null
+  function setFormFrom(entry) {
+    // Color first (it drives which hens show), then chicken, weight, condition.
+    form.elements.color.value = entry.color
+    chicken = entry.chicken ?? null
+    renderChickens()
+    if (entry.weight == null) {
+      tens = null
+      ones = null
+    } else {
+      tens = Math.floor(entry.weight / 10)
+      ones = entry.weight % 10
+    }
+    updateWeight()
+    condition = entry.condition ?? null
+    updateCondition()
+  }
+  function enterEdit(id) {
+    const entry = getEntries().find((e) => e.id === id)
+    if (!entry) return
+    editingId = id
+    setFormFrom(entry)
+    saveButton.textContent = 'Update' // short: fits one line beside Cancel + condition at 320
+    cancelButton.classList.remove('hidden')
+    form.classList.add('editing')
+    statusEl.classList.remove('visible')
+    view.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  function exitEdit() {
+    editingId = null
+    saveButton.textContent = 'Save egg'
+    cancelButton.classList.add('hidden')
+    form.classList.remove('editing')
+  }
+  function resetForm({ keepColor = true } = {}) {
+    tens = null
+    ones = null
+    chicken = null
+    condition = null
+    if (!keepColor) form.elements.color.value = COLORS[0].id
+    updateWeight()
+    renderChickens()
+    updateCondition()
+  }
+  cancelButton.addEventListener('click', () => {
+    exitEdit()
+    resetForm({ keepColor: false })
+    showStatus('Edit cancelled')
+  })
+
+  // --- Save (or update) + undo ---
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     // Weight is optional: no tens selected saves a weightless egg.
     const weight = tens === null ? null : tens * 10 + (ones ?? 0)
+    const color = form.elements.color.value
+
+    // --- Edit: apply the change to the existing entry (no new egg, no notify). ---
+    if (editingId) {
+      updateEgg(editingId, { weight, color, chicken, condition })
+      exitEdit()
+      resetForm({ keepColor: false })
+      showStatus('Updated')
+      refreshHistory()
+      return
+    }
 
     let entry
     try {
@@ -165,8 +292,9 @@ export function renderLog(view, signal) {
       ;({ entry } = saveEgg({
         timestamp: new Date().toISOString(),
         weight,
-        color: form.elements.color.value,
+        color,
         chicken,
+        condition,
       }))
     } catch (err) {
       showStatus(`Couldn't save: ${err.message}`)
@@ -181,12 +309,8 @@ export function renderLog(view, signal) {
     // imports/undo/sync never call this, so it can't fan out a flood.
     notifyNewEgg(entry)
 
-    // Reset for the next egg: keep color (clutches often match), clear weight.
-    tens = null
-    ones = null
-    chicken = null
-    updateWeight()
-    renderChickens()
+    // Reset for the next egg: keep color (clutches often match), clear the rest.
+    resetForm({ keepColor: true })
     refreshHistory()
   })
 
@@ -230,19 +354,42 @@ export function renderLog(view, signal) {
       .slice(0, 12)
       .map(
         (e) => `
-        <li>
+        <li${e.condition ? ' class="bad"' : ''}>
           <span class="swatch" style="--swatch:${swatchFor(e.color)}"></span>
           <span class="h-weight">${e.weight != null ? `${e.weight}g` : '—'}</span>
-          <span class="h-meta">${e.chicken ?? ''}</span>
+          <span class="h-meta">${e.condition ? `<span class="h-cond" role="button" tabindex="0" data-label="${conditionLabel(e.condition)}" title="${conditionLabel(e.condition)}" aria-label="${conditionLabel(e.condition)}">${conditionEmoji(e.condition)}</span> ` : ''}${e.chicken ?? ''}</span>
           <span class="h-time">${formatWhen(e.timestamp)}</span>
+          <button type="button" class="h-edit" data-id="${e.id}" aria-label="Edit entry">✎</button>
           <button type="button" class="h-del" data-id="${e.id}" aria-label="Delete entry">×</button>
         </li>`,
       )
       .join('')
   }
 
-  // Two-tap delete: first tap arms the button, second tap deletes.
+  // A tapped condition emoji explains itself (titles don't work on touch).
+  let condTipTimer
+  function showCondTip(el) {
+    document.querySelectorAll('.cond-tip').forEach((t) => t.remove())
+    const tip = document.createElement('div')
+    tip.className = 'cond-tip'
+    tip.textContent = el.dataset.label
+    document.body.appendChild(tip) // body, not the row: h-meta clips overflow
+    const r = el.getBoundingClientRect()
+    tip.style.left = `${r.left + r.width / 2}px`
+    tip.style.top = `${r.top}px`
+    clearTimeout(condTipTimer)
+    condTipTimer = setTimeout(() => tip.remove(), 2200)
+  }
+
+  // Row actions: explain a condition emoji, edit (prefill the form), or two-tap
+  // delete (arm, then confirm).
   historyEl.addEventListener('click', (e) => {
+    const cond = e.target.closest('.h-cond')
+    if (cond) return showCondTip(cond)
+
+    const edit = e.target.closest('.h-edit')
+    if (edit) return enterEdit(edit.dataset.id)
+
     const btn = e.target.closest('.h-del')
     if (!btn) return
     if (!btn.classList.contains('arm')) {
@@ -253,6 +400,11 @@ export function renderLog(view, signal) {
         btn.textContent = '×'
       }, 2500)
       return
+    }
+    // If deleting the row currently being edited, drop out of edit mode.
+    if (editingId === btn.dataset.id) {
+      exitEdit()
+      resetForm({ keepColor: false })
     }
     deleteEgg(btn.dataset.id)
     refreshHistory()
@@ -321,6 +473,10 @@ export function renderLog(view, signal) {
   // leaving any in-progress form entry untouched. The signal unbinds this when
   // the view is torn down (tab switch).
   window.addEventListener('eggo:historychanged', refreshHistory, { signal })
+  // Drop any lingering condition tooltip when the view is torn down (tab switch).
+  signal.addEventListener('abort', () =>
+    document.querySelectorAll('.cond-tip').forEach((t) => t.remove()),
+  )
 }
 
 function isToday(entry) {
@@ -329,6 +485,14 @@ function isToday(entry) {
 
 function swatchFor(colorId) {
   return COLORS.find((c) => c.id === colorId)?.swatch ?? '#ccc'
+}
+
+function conditionLabel(id) {
+  return CONDITIONS.find((c) => c.id === id)?.label ?? id
+}
+
+function conditionEmoji(id) {
+  return CONDITIONS.find((c) => c.id === id)?.emoji ?? '⚠'
 }
 
 function formatWhen(timestamp) {

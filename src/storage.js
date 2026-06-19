@@ -84,6 +84,24 @@ export function importEntries(entries) {
   void flush()
 }
 
+// Edit an existing entry's fields (weight/color/chicken/condition) in place.
+// Entries used to be immutable; an edit re-pushes by id via the idempotent upsert
+// path — mark a previously-synced entry unsynced + attempted so flush() upserts
+// the changed row instead of appending a duplicate. Returns the updated entry.
+export function updateEgg(id, fields) {
+  const entries = getEntries()
+  const entry = entries.find((e) => e.id === id)
+  if (!entry) return null
+  Object.assign(entry, fields)
+  if (entry.synced) {
+    entry.synced = false
+    entry.attempted = true // already on the backend → re-push must upsert, not append
+  }
+  setEntries(entries)
+  void flush()
+  return entry
+}
+
 // Remove locally. If the entry was already on the backend, queue a remote
 // delete so the deletion propagates to other devices.
 export function deleteEgg(id) {

@@ -3,11 +3,13 @@
 // existing deployment (`clasp deploy -i <id>`) to keep the /exec URL stable.
 // Deployed as a web app: execute as the deploying user, access ANYONE_ANONYMOUS.
 //
-// Sheet schema (row 1 = header): [id, timestamp, weight, color, chicken].
+// Sheet schema (row 1 = header): [id, timestamp, weight, color, chicken, condition].
+// `condition` (null/broken/soft) is the newest column; ensureHeader_ rewrites the
+// header row, so a sheet built on the old 5-col schema gains the column on first write.
 // `id` gives entries a stable identity so the frontend can upsert, delete, and
 // dedupe rows across devices. All POSTs are text/plain (no CORS preflight).
 
-var HEADER = ['id', 'timestamp', 'weight', 'color', 'chicken'];
+var HEADER = ['id', 'timestamp', 'weight', 'color', 'chicken', 'condition'];
 
 function sheet_() {
   return SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -27,6 +29,7 @@ function doGet() {
       weight: row[2] === '' || row[2] == null ? null : Number(row[2]),
       color: row[3],
       chicken: row[4] === '' ? null : row[4],
+      condition: row[5] === '' || row[5] == null ? null : row[5],
     });
   }
   return json(out);
@@ -115,9 +118,9 @@ function appendRows_(items) {
   var rows = [];
   for (var i = 0; i < items.length; i++) {
     var e = items[i];
-    rows.push([e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || '']);
+    rows.push([e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || '', e.condition || '']);
   }
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADER.length).setValues(rows);
   return rows.length;
 }
 
@@ -136,7 +139,7 @@ function batchUpsert_(items) {
   var append = [];
   for (var j = 0; j < items.length; j++) {
     var e = items[j];
-    var row = [e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || ''];
+    var row = [e.id, e.timestamp, e.weight == null ? '' : e.weight, e.color, e.chicken || '', e.condition || ''];
     var existing = idToRow[String(e.id)];
     if (existing) {
       sheet.getRange(existing, 1, 1, row.length).setValues([row]);
@@ -171,6 +174,7 @@ function upsert_(entry) {
     entry.weight == null ? '' : entry.weight,
     entry.color,
     entry.chicken || '',
+    entry.condition || '',
   ];
   var row = rowForId_(sheet, entry.id);
   if (row) {
