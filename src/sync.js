@@ -31,25 +31,39 @@ function emit(detail) {
   }
 }
 
+// Mutable fields the backend owns. If a synced entry's remote copy differs on any
+// of these, it was edited elsewhere and we adopt the remote value.
+const MUTABLE = ['timestamp', 'weight', 'color', 'chicken', 'condition']
+const mutated = (a, b) => MUTABLE.some((k) => (a[k] ?? null) !== (b[k] ?? null))
+
 // --- Pure core (no I/O): merge local + remote into the new local state, and
 // prune tombstones (pendingDeletes) already gone from the backend.
-// Returns { entries, pendingDeletes, added, removed } where added/removed count
-// what a pull changed, so the UI can decide whether to notify.
+// Returns { entries, pendingDeletes, added, removed, changed }: added/removed/changed
+// count what a pull changed, so the UI can refresh and decide whether to notify.
 export function reconcile(local, remote, pendingDeletes = []) {
   const pending = new Set(pendingDeletes)
-  const remoteIds = new Set(remote.map((e) => e.id))
+  const remoteById = new Map(remote.map((e) => [e.id, e]))
   const localIds = new Set(local.map((e) => e.id))
   const entries = []
   let removed = 0
+  let changed = 0
 
   for (const e of local) {
     if (pending.has(e.id)) continue // tombstoned; awaiting remote delete
-    const inRemote = remoteIds.has(e.id)
+    const r = remoteById.get(e.id)
     if (e.synced) {
-      if (inRemote) entries.push(e) // unchanged (entries are immutable)
-      else removed++ // remote-deleted elsewhere → drop
+      if (r) {
+        // Backend is the source of truth for an already-synced entry: adopt a
+        // field change made elsewhere (e.g. edited to broken shell on another
+        // device). Preserve the local-only `seeded` marker.
+        if (mutated(e, r)) changed++
+        entries.push(e.seeded ? { ...r, synced: true, seeded: true } : { ...r, synced: true })
+      } else {
+        removed++ // remote-deleted elsewhere → drop
+      }
     } else {
-      entries.push(inRemote ? { ...e, synced: true } : e) // new local add
+      // A local add or not-yet-pushed edit: local wins (flush will upsert it).
+      entries.push(r ? { ...e, synced: true } : e)
     }
   }
 
@@ -61,8 +75,8 @@ export function reconcile(local, remote, pendingDeletes = []) {
   }
 
   // Keep only tombstones still present remotely; the rest are already gone.
-  const newPending = pendingDeletes.filter((id) => remoteIds.has(id))
-  return { entries, pendingDeletes: newPending, added, removed }
+  const newPending = pendingDeletes.filter((id) => remoteById.has(id))
+  return { entries, pendingDeletes: newPending, added, removed, changed }
 }
 
 // --- Network helpers (text/plain avoids a CORS preflight Apps Script can't
@@ -193,11 +207,11 @@ async function doFlush() {
 }
 
 // --- pull: fetch the backend, reconcile into local, then flush local changes.
-// Returns { added, removed, ok }. Serialized like flush.
+// Returns { added, removed, changed, ok }. Serialized like flush.
 let pulling = null
 
 export function pull() {
-  if (!endpoint()) return Promise.resolve({ added: 0, removed: 0, ok: false })
+  if (!endpoint()) return Promise.resolve({ added: 0, removed: 0, changed: 0, ok: false })
   if (pulling) return pulling
   pulling = doPull().finally(() => {
     pulling = null
@@ -213,9 +227,9 @@ async function doPull() {
     remote = await fetchRemote()
   } catch {
     emit({ kind: 'pull', phase: 'end', ok: false, ms: Date.now() - t0 })
-    return { added: 0, removed: 0, ok: false }
+    return { added: 0, removed: 0, changed: 0, ok: false }
   }
-  const { entries, pendingDeletes, added, removed } = reconcile(
+  const { entries, pendingDeletes, added, removed, changed } = reconcile(
     getEntries(),
     remote,
     getPendingDeletes(),
@@ -225,7 +239,7 @@ async function doPull() {
   setLastPull(new Date().toISOString())
   emit({ kind: 'pull', phase: 'end', ok: true, ms: Date.now() - t0 })
   await flush() // push anything still local-only + drain deletes (emits its own)
-  return { added, removed, ok: true }
+  return { added, removed, changed, ok: true }
 }
 
 // Backend row count, for the Debug tab. Throws if unreachable.

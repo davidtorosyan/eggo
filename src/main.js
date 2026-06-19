@@ -134,23 +134,24 @@ async function runSync(initial = false, manual = false) {
   const fresh = initial && getEntries().length === 0
   setSync('syncing')
   if (fresh) toast('Loading your eggs…')
-  const { added, removed, ok } = await pull()
+  const { added, removed, changed, ok } = await pull()
   setSync(ok ? 'idle' : 'offline')
   if (!ok) {
     if (manual) toast('Offline — no connection')
     else if (fresh) toast('Offline — your eggs will load when reconnected')
     return
   }
-  if (added || removed) refreshAfterSync()
+  if (added || removed || changed) refreshAfterSync()
   if (fresh) toast(`Loaded ${added} egg${added === 1 ? '' : 's'} from the cloud`)
-  else if (added || removed) toast(syncSummary(added, removed))
+  else if (added || removed || changed) toast(syncSummary(added, removed, changed))
   else if (manual) toast('Up to date')
 }
 
-function syncSummary(added, removed) {
+function syncSummary(added, removed, changed) {
   const parts = []
   if (added) parts.push(`${added} added`)
   if (removed) parts.push(`${removed} removed`)
+  if (changed) parts.push(`${changed} updated`)
   return `Synced — ${parts.join(', ')}`
 }
 

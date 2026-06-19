@@ -47,6 +47,28 @@ test('synced local present in remote is kept', () => {
   assert.equal(removed, 0)
 })
 
+test('synced local adopts a field change made on the backend (edit propagates)', () => {
+  // Device A logged a healthy egg (synced). Someone edited it to broken shell on
+  // the backend. On A's next pull, reconcile must adopt the remote value.
+  const loc = [local('a', true, { condition: null, weight: 50 })]
+  const rem = [remote('a', { condition: 'broken', weight: 52 })]
+  const { entries } = reconcile(loc, rem, [])
+  assert.equal(entries.length, 1)
+  assert.equal(entries[0].condition, 'broken') // remote = source of truth
+  assert.equal(entries[0].weight, 52)
+  assert.equal(entries[0].synced, true)
+})
+
+test('unsynced local edit is NOT overwritten by stale remote (local edit wins until pushed)', () => {
+  // A local edit (synced:false) must survive a pull that still has the old value,
+  // so the edit isn't clobbered before it's pushed.
+  const loc = [local('a', false, { condition: 'broken' })]
+  const rem = [remote('a', { condition: null })]
+  const { entries } = reconcile(loc, rem, [])
+  assert.equal(entries[0].condition, 'broken')
+  assert.equal(entries[0].synced, true) // flips to synced; flush will upsert it
+})
+
 test('synced local missing from remote is pruned (remote delete propagates)', () => {
   const { entries, removed } = reconcile([local('a', true)], [], [])
   assert.deepEqual(entries, [])

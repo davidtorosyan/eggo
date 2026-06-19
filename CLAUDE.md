@@ -150,14 +150,15 @@ the network and the merge.
 - **`reconcile(local, remote, pendingDeletes)`** is the pure, unit-tested core.
   **Backend is the shared source of truth:** a previously-synced entry missing
   from the backend was deleted elsewhere → dropped locally (deletes propagate).
-  Never-synced local entries are always kept + pushed; `seeded` entries pass
-  through untouched. **`reconcile` keeps the local copy** for an id present on both
-  sides (no field-level merge from remote). With edits (`updateEgg`), an edited
-  entry is re-pushed via upsert and local wins — fine for a ~2-device household.
-  Caveat: if a `pull` lands in the narrow window between an edit and its `flush`,
-  `reconcile` can mark the entry synced before the edit reaches the backend, so
-  that edit may not propagate (local stays correct). Acceptable for now; harden
-  with an edit-dirty flag if it ever bites.
+  Never-synced local entries (a fresh add or a not-yet-pushed edit) are kept +
+  pushed — local wins so an in-flight edit isn't clobbered. For an id present on
+  **both** sides that is already `synced`, reconcile **adopts the remote fields**
+  (it's the source of truth), so an edit made on another device propagates on the
+  next pull; this is counted as `changed` so the UI refreshes. `seeded` is
+  preserved across the adopt. Returns `{ entries, pendingDeletes, added, removed,
+  changed }`. Caveat: in the narrow window where a `pull` marks a local edit synced
+  before its `flush` lands, a later pull can adopt the stale remote and revert that
+  edit — rare; harden with an edit-dirty flag if it ever bites.
 
 ### Managing the Apps Script (clasp)
 
