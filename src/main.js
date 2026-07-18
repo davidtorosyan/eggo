@@ -226,8 +226,26 @@ window.addEventListener('touchend', async () => {
   }
 })
 
-// Debug tab — dev builds only; the whole chunk is dropped from prod.
-if (import.meta.env.DEV) {
+// Debug tab. Always present in dev builds. In prod it's opt-in via a `?debug`
+// URL param, made sticky in localStorage so it survives reloads and tab
+// navigation on a phone — the point is to reach the sync / notification tools
+// on the live site, where there's no dev server. Load `?debug=off` to hide it.
+//
+// Safe for prod: the destructive backend tools inside the tab only render in
+// debug-backend mode, and those ops target the throwaway debug Sheet (never
+// production). The prod-facing actions here are Pull/Push (idempotent), Send
+// test push, Enable notifications, Import (local), and Wipe local (recoverable).
+const DEBUG_TAB_KEY = 'eggo-show-debug'
+function debugTabEnabled() {
+  const param = new URLSearchParams(location.search).get('debug')
+  if (param != null) {
+    const on = param !== 'off' && param !== '0' && param !== 'false'
+    localStorage.setItem(DEBUG_TAB_KEY, on ? 'true' : 'false')
+  }
+  return import.meta.env.DEV || localStorage.getItem(DEBUG_TAB_KEY) === 'true'
+}
+
+if (debugTabEnabled()) {
   import('./debug-view.js').then(({ renderDebug }) => {
     views.debug = renderDebug
     const btn = document.createElement('button')

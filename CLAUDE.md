@@ -44,8 +44,12 @@ three follow.
   color doughnut, by-chicken bar. **Tap a color slice or hen bar to filter** the
   whole page; an amber "Showing: X ×" pill clears it (one filter at a time).
   Hen axis labels have an egg-color dot (custom canvas plugin `henDots`).
-- **Debug** (`debug-view.js`): **dev builds only** (gated by `import.meta.env.DEV`,
-  dropped from prod). Tiles (entries / unsynced / pending-del / backend count /
+- **Debug** (`debug-view.js`): shown in dev builds always; in **prod** it's
+  **opt-in** via a `?debug` URL param (sticky in localStorage — `eggo-show-debug`;
+  `?debug=off` hides it), so the phone can reach sync/notification tools on the
+  live site. It stays safe for prod because the destructive backend tools inside
+  only render in debug-backend mode and target the throwaway debug Sheet, never
+  production (see the gating note below). Tiles (entries / unsynced / pending-del / backend count /
   seeded / last-pull); a **Backend toggle** (a switch — flips to the throwaway
   debug Sheet, clears local, reloads); always-on **Sync** (Pull, Push), **Import**,
   **Wipe local**. A **Debug tools** section — Seed, **+5000 rows to backend**
