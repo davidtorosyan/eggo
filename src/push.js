@@ -99,23 +99,47 @@ export function loadOneSignal() {
   document.head.appendChild(s)
 }
 
-// Prompt + subscribe, then tag this device so it can be excluded as the sender.
-// Resolves to whether notifications ended up enabled.
-export function enableNotifications() {
+// Run `job(OneSignal)` once the SDK is ready, but never hang forever waiting for
+// it. If the SDK doesn't initialize within the timeout — the usual cause being
+// that OneSignal isn't configured for this site's domain (e.g. after a domain
+// change), so `init()` never completes and the deferred queue never drains — we
+// resolve `false` instead of leaving the caller (and its "Enabling…" button)
+// stuck. Once the job starts we let it run to completion (a permission prompt can
+// legitimately take a while), so the timeout only guards "SDK never became ready".
+function runWhenReady(job) {
   return new Promise((resolve) => {
     if (!pushSupported()) return resolve(false)
+    let settled = false
+    const done = (v) => {
+      if (!settled) {
+        settled = true
+        resolve(v)
+      }
+    }
+    const timer = setTimeout(() => done(false), 8000)
     withOneSignal(async (OneSignal) => {
+      if (settled) return // already timed out; don't run late (or re-prompt)
+      clearTimeout(timer)
       try {
-        await OneSignal.Notifications.requestPermission()
-        if (OneSignal.Notifications.permission) {
-          await OneSignal.User.PushSubscription.optIn()
-          OneSignal.User.addTag('device', deviceId())
-        }
-        resolve(Boolean(OneSignal.Notifications.permission))
+        done(await job(OneSignal))
       } catch {
-        resolve(false)
+        done(false)
       }
     })
+  })
+}
+
+// Prompt + subscribe, then tag this device so it can be excluded as the sender.
+// Resolves to whether notifications ended up enabled (false if the SDK never
+// became ready — see runWhenReady).
+export function enableNotifications() {
+  return runWhenReady(async (OneSignal) => {
+    await OneSignal.Notifications.requestPermission()
+    if (OneSignal.Notifications.permission) {
+      await OneSignal.User.PushSubscription.optIn()
+      OneSignal.User.addTag('device', deviceId())
+    }
+    return Boolean(OneSignal.Notifications.permission)
   })
 }
 
@@ -127,16 +151,9 @@ export function enableNotifications() {
 
 // Drop this device's push subscription. Best-effort; resolves to whether it ran.
 export function unsubscribeNotifications() {
-  return new Promise((resolve) => {
-    if (!pushSupported()) return resolve(false)
-    withOneSignal(async (OneSignal) => {
-      try {
-        await OneSignal.User.PushSubscription.optOut()
-        resolve(true)
-      } catch {
-        resolve(false)
-      }
-    })
+  return runWhenReady(async (OneSignal) => {
+    await OneSignal.User.PushSubscription.optOut()
+    return true
   })
 }
 
@@ -144,25 +161,18 @@ export function unsubscribeNotifications() {
 // tag. The opt-out first fixes the stale case where a lone opt-in would no-op
 // because OneSignal still thinks this device is subscribed. Resolves to enabled.
 export function resubscribeNotifications() {
-  return new Promise((resolve) => {
-    if (!pushSupported()) return resolve(false)
-    withOneSignal(async (OneSignal) => {
+  return runWhenReady(async (OneSignal) => {
+    await OneSignal.Notifications.requestPermission()
+    if (OneSignal.Notifications.permission) {
       try {
-        await OneSignal.Notifications.requestPermission()
-        if (OneSignal.Notifications.permission) {
-          try {
-            await OneSignal.User.PushSubscription.optOut()
-          } catch {
-            /* may already be out — keep going */
-          }
-          await OneSignal.User.PushSubscription.optIn()
-          OneSignal.User.addTag('device', deviceId())
-        }
-        resolve(Boolean(OneSignal.Notifications.permission))
+        await OneSignal.User.PushSubscription.optOut()
       } catch {
-        resolve(false)
+        /* may already be out — keep going */
       }
-    })
+      await OneSignal.User.PushSubscription.optIn()
+      OneSignal.User.addTag('device', deviceId())
+    }
+    return Boolean(OneSignal.Notifications.permission)
   })
 }
 

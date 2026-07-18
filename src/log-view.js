@@ -526,8 +526,16 @@ export function renderLog(view, signal) {
       }
       mainBtn.disabled = true
       mainBtn.textContent = 'Enabling…'
-      await enableNotifications()
+      const ok = await enableNotifications()
       renderNotify()
+      if (!ok) {
+        // renderNotify rebuilt the panel; set the status on the fresh element.
+        const s = notifyPanel.querySelector('#notify-status')
+        if (s) {
+          s.textContent =
+            "Couldn't enable alerts (timed out or dismissed). If the site's web address changed, push has to be reconfigured for the new domain first."
+        }
+      }
     })
 
     // A tool button: disable during its async op, then report via the status line
