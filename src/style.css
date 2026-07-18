@@ -650,6 +650,57 @@ form.editing {
   opacity: 0.6;
   cursor: default;
 }
+/* Long-press target: don't let the hold pop a text-selection callout. */
+.notify-btn {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.notify-caret {
+  opacity: 0.55;
+  font-weight: 600;
+}
+.notify-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.notify-tools.hidden {
+  display: none;
+}
+.notify-tool {
+  padding: 10px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 8%, white);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.notify-tool#notify-test {
+  grid-column: 1 / -1; /* the test button spans the full width */
+}
+.notify-tool.danger {
+  color: var(--danger);
+  background: white;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+}
+.notify-tool:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.notify-status {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: center;
+  white-space: pre-line;
+}
+.notify-status:empty {
+  display: none;
+}
 
 /* Today + history */
 .today {

@@ -119,6 +119,77 @@ export function enableNotifications() {
   })
 }
 
+// --- Manual subscription controls, surfaced by long-pressing the alerts button.
+// A web push subscription can silently go stale (iOS especially — Apple drops
+// them), and once the browser permission is 'granted' the Enable button treats
+// you as done, so there's otherwise no way to force a fresh subscription. These
+// give one: unsubscribe, and a resubscribe that forces a clean re-opt-in. ---
+
+// Drop this device's push subscription. Best-effort; resolves to whether it ran.
+export function unsubscribeNotifications() {
+  return new Promise((resolve) => {
+    if (!pushSupported()) return resolve(false)
+    withOneSignal(async (OneSignal) => {
+      try {
+        await OneSignal.User.PushSubscription.optOut()
+        resolve(true)
+      } catch {
+        resolve(false)
+      }
+    })
+  })
+}
+
+// Force a fresh subscription: opt out, then back in, then re-assert the device
+// tag. The opt-out first fixes the stale case where a lone opt-in would no-op
+// because OneSignal still thinks this device is subscribed. Resolves to enabled.
+export function resubscribeNotifications() {
+  return new Promise((resolve) => {
+    if (!pushSupported()) return resolve(false)
+    withOneSignal(async (OneSignal) => {
+      try {
+        await OneSignal.Notifications.requestPermission()
+        if (OneSignal.Notifications.permission) {
+          try {
+            await OneSignal.User.PushSubscription.optOut()
+          } catch {
+            /* may already be out — keep going */
+          }
+          await OneSignal.User.PushSubscription.optIn()
+          OneSignal.User.addTag('device', deviceId())
+        }
+        resolve(Boolean(OneSignal.Notifications.permission))
+      } catch {
+        resolve(false)
+      }
+    })
+  })
+}
+
+// Fire a notification to THIS device only, so you can check alerts display here.
+// It's a LOCAL notification shown via our own service worker — it verifies the
+// permission + SW + display path on this device without going through the push
+// server, so it works (and isolates "does anything show up?") even when the push
+// subscription is dead. End-to-end cross-device delivery is instead exercised by
+// logging an egg on another device. Resolves to { ok, reason }.
+export async function sendTestNotification() {
+  if (!pushSupported()) return { ok: false, reason: 'unsupported' }
+  if (Notification.permission !== 'granted') return { ok: false, reason: 'permission' }
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const icon = `${import.meta.env.BASE_URL}icon-192.png`
+    await reg.showNotification('Eggo', {
+      body: '🥚 Test alert — notifications work on this device.',
+      icon,
+      badge: icon,
+      tag: 'eggo-test',
+    })
+    return { ok: true }
+  } catch {
+    return { ok: false, reason: 'failed' }
+  }
+}
+
 // Best-effort "a new egg was logged" push to the OTHER devices. Fired ONLY from
 // the live save path — never imports, backlog, undo/delete, or sync — so it can't
 // fan out a stale flood. Failures are swallowed; the egg still syncs normally.

@@ -265,7 +265,13 @@ logged"). Built on **OneSignal** (managed push). How it works:
   `{action:'notify'}` POST fired **only from the live-save path** in `log-view.js`
   (never imports/backlog/undo/sync). The opt-in UI is a section at the bottom of
   the Log view; the **Enable** button shows on desktop/Android, while iOS shows an
-  "add to home screen first" hint (`needsInstall`).
+  "add to home screen first" hint (`needsInstall`). **Long-pressing** the alerts
+  button (or tapping it once it's on) reveals a tools drawer — **Test this device**
+  (a local SW `showNotification`, so it verifies the permission/SW/display path on
+  this device without the push server — not gated behind debug), **Resubscribe**
+  (`resubscribeNotifications` — force a clean opt-out→opt-in→re-tag, the fix when a
+  subscription silently goes stale and Enable no-ops because permission is already
+  granted), and **Unsubscribe** (`unsubscribeNotifications` — `optOut`).
 - **Service worker** (`src/sw.js`): `vite-plugin-pwa` runs in **`injectManifest`**
   mode building a **classic/iife** SW (`injectManifest.rollupFormat: 'iife'`, so
   `importScripts` works) that pulls in OneSignal's worker for push/display +

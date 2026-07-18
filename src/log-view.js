@@ -10,7 +10,14 @@ import {
 import { saveEgg, updateEgg, deleteEgg, getEntries, importEntries } from './storage.js'
 import { eggSpan, eggCluster } from './egg-icon.js'
 import { parseImport } from './import.js'
-import { notifyNewEgg, notificationsState, enableNotifications } from './push.js'
+import {
+  notifyNewEgg,
+  notificationsState,
+  enableNotifications,
+  unsubscribeNotifications,
+  resubscribeNotifications,
+  sendTestNotification,
+} from './push.js'
 
 const TENS = []
 for (let t = Math.floor(WEIGHT_MIN / 10); t <= Math.floor(WEIGHT_MAX / 10); t++) {
@@ -451,21 +458,107 @@ export function renderLog(view, signal) {
       return
     }
     notifyPanel.hidden = false
-    if (s.enabled) {
-      notifyPanel.innerHTML = `<p class="notify-hint on">🔔 Egg alerts are on.</p>`
-    } else if (s.denied) {
+    if (s.denied) {
       notifyPanel.innerHTML = `<p class="notify-hint">🔔 Notifications are blocked — turn them on for Eggo in your device settings.</p>`
-    } else if (s.needsInstall) {
+      return
+    }
+    if (s.needsInstall) {
       notifyPanel.innerHTML = `<p class="notify-hint">🔔 Add Eggo to your home screen to get an alert when a new egg is logged.</p>`
-    } else {
-      notifyPanel.innerHTML = `<button type="button" class="notify-btn" id="notify-enable">🔔 Enable egg alerts</button>`
-      notifyPanel.querySelector('#notify-enable').addEventListener('click', async (e) => {
+      return
+    }
+
+    // Primary alerts button + a tools drawer (Test / Resubscribe / Unsubscribe)
+    // revealed by a long-press — or a tap when alerts are already on. The drawer
+    // is deliberately out of the way (bottom of the Log view) so the fast entry
+    // path stays uncluttered; it's for the rare "push stopped working" reset.
+    const on = s.enabled
+    notifyPanel.innerHTML = `
+      <button type="button" class="notify-btn" id="notify-main"
+              aria-haspopup="true" aria-expanded="false">
+        ${on ? '🔔 Egg alerts are on' : '🔔 Enable egg alerts'}<span class="notify-caret"> ▾</span>
+      </button>
+      <div class="notify-tools hidden" id="notify-tools">
+        <button type="button" class="notify-tool" id="notify-test">Test this device</button>
+        <button type="button" class="notify-tool" id="notify-resub">Resubscribe</button>
+        <button type="button" class="notify-tool danger" id="notify-unsub">Unsubscribe</button>
+      </div>
+      <p class="notify-status" id="notify-status" role="status"></p>
+    `
+
+    const mainBtn = notifyPanel.querySelector('#notify-main')
+    const tools = notifyPanel.querySelector('#notify-tools')
+    const statusLine = notifyPanel.querySelector('#notify-status')
+    const setStatus = (m) => {
+      statusLine.textContent = m
+    }
+    const openTools = () => {
+      tools.classList.remove('hidden')
+      mainBtn.setAttribute('aria-expanded', 'true')
+    }
+
+    // Long-press (press & hold ~500ms) reveals the tools drawer. Suppress the
+    // iOS text-callout so the hold doesn't pop a selection menu instead.
+    let holdTimer = null
+    let longFired = false
+    mainBtn.addEventListener('contextmenu', (e) => e.preventDefault())
+    mainBtn.addEventListener('pointerdown', () => {
+      longFired = false
+      holdTimer = setTimeout(() => {
+        longFired = true
+        openTools()
+      }, 500)
+    })
+    const cancelHold = () => clearTimeout(holdTimer)
+    mainBtn.addEventListener('pointerup', cancelHold)
+    mainBtn.addEventListener('pointerleave', cancelHold)
+    mainBtn.addEventListener('pointercancel', cancelHold)
+
+    mainBtn.addEventListener('click', async () => {
+      if (longFired) {
+        longFired = false // the hold already opened the drawer; swallow the click
+        return
+      }
+      if (on) {
+        // Already on: a tap just toggles the tools drawer (nothing else to do).
+        const open = tools.classList.toggle('hidden')
+        mainBtn.setAttribute('aria-expanded', String(!open))
+        return
+      }
+      mainBtn.disabled = true
+      mainBtn.textContent = 'Enabling…'
+      await enableNotifications()
+      renderNotify()
+    })
+
+    // A tool button: disable during its async op, then report via the status line
+    // (we don't re-render the panel, so the status message survives).
+    const wireTool = (id, busy, run) => {
+      notifyPanel.querySelector(id).addEventListener('click', async (e) => {
         e.currentTarget.disabled = true
-        e.currentTarget.textContent = 'Enabling…'
-        await enableNotifications()
-        renderNotify()
+        setStatus(busy)
+        const msg = await run()
+        e.currentTarget.disabled = false
+        setStatus(msg)
       })
     }
+    wireTool('#notify-test', 'Sending a test to this device…', async () => {
+      const r = await sendTestNotification()
+      if (r.ok) return 'Test sent — you should see a notification on this device.'
+      if (r.reason === 'permission') return 'Enable alerts first, then test.'
+      return "Couldn't show a test notification on this device."
+    })
+    wireTool('#notify-resub', 'Re-subscribing this device…', async () => {
+      const ok = await resubscribeNotifications()
+      return ok
+        ? 'Re-subscribed. Try "Test this device", or log an egg on another device.'
+        : 'Re-subscribe failed — check that alerts are allowed for Eggo.'
+    })
+    wireTool('#notify-unsub', 'Unsubscribing this device…', async () => {
+      const ok = await unsubscribeNotifications()
+      return ok
+        ? 'Unsubscribed on this device. Press Resubscribe to turn it back on.'
+        : 'Unsubscribe failed.'
+    })
   }
   renderNotify()
 
