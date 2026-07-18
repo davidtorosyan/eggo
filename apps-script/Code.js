@@ -83,7 +83,7 @@ function notify_(body) {
     ],
     headings: { en: 'Eggo' },
     contents: { en: notifyText_(body) },
-    url: 'https://www.davidtorosyan.com/eggo/',
+    url: 'https://www.jimbo84.com/eggo/',
   };
 
   try {

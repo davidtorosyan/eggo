@@ -3,7 +3,7 @@
 A fast, mobile-first egg tracker for a backyard flock. Log each egg's weight,
 color (brown / blue / olive), and optionally which chicken laid it — in seconds.
 
-**Live:** https://www.davidtorosyan.com/eggo/
+**Live:** https://www.jimbo84.com/eggo/
 
 - **Frontend:** static site (Vite, vanilla JS) hosted on GitHub Pages
 - **Storage:** a Google Sheet, written via a Google Apps Script web app

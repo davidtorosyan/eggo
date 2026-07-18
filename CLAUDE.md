@@ -248,7 +248,7 @@ load-from-backend on new devices, id-keyed reconcile with deletes propagating
 (backend = shared truth), sync indicator + toast, **pull-to-refresh**, debug
 divergence tools, unit + live-Sheet e2e tests. **Shipped:** public repo
 `davidtorosyan/eggo`, deployed to GitHub Pages via `deploy.yml` — live at
-https://www.davidtorosyan.com/eggo/ (custom domain; vite `base: '/eggo/'`).
+https://www.jimbo84.com/eggo/ (custom domain; vite `base: '/eggo/'`).
 **PWA done:** installable (manifest + icons) + offline (Workbox SW) via
 `vite-plugin-pwa`.
 **Push notifications done:** logging an egg on one device notifies the others
